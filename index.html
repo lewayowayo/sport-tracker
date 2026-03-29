@@ -390,7 +390,7 @@ let selectedDate=new Date();
 let currentSessionKey=null;
 
 // === UTILS ===
-function dateKey(d){return d.toISOString().slice(0,10)}
+function dateKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function getMonday(d){const dt=new Date(d);const day=dt.getDay();const diff=dt.getDate()-day+(day===0?-6:1);dt.setDate(diff);dt.setHours(0,0,0,0);return dt}
 function formatDate(d){return d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}
 
@@ -838,6 +838,7 @@ function togglePlanTag(btn,date,typeId){
   const t=SESSION_TYPES.find(t=>t.id===typeId);
   if(idx>=0){arr.splice(idx,1);btn.classList.replace('active','inactive');btn.style.background=t.color+'44';btn.style.color=t.color;}
   else{arr.push(typeId);btn.classList.replace('inactive','active');btn.style.background=t.color;btn.style.color='#fff';}
+  save(data);
   updateQuotas();
 }
 function savePlanning(){save(data);closePlanning();renderWeek();}
