@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sport">
+<meta name="theme-color" content="#0a0a0f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💪</text></svg>">
+<title>Sport Tracker</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+--bg:#0a0a0f;--surface:#16161f;--surface2:#1e1e2a;--surface3:#272735;
+--text:#e8e8f0;--text2:#9090a8;--accent:#6c5ce7;--accent2:#a29bfe;
+--green:#00b894;--orange:#fdcb6e;--red:#e17055;--blue:#74b9ff;
+--radius:14px;--safe-top:env(safe-area-inset-top,20px);--safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html,body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro','Helvetica Neue',sans-serif;font-size:16px;line-height:1.5;overscroll-behavior:none;min-height:100vh;min-height:100dvh}
+body{padding-top:calc(var(--safe-top) + 8px);padding-bottom:calc(var(--safe-bottom) + 80px)}
+
+.nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--surface3);display:flex;padding:8px 16px calc(var(--safe-bottom) + 8px);z-index:100;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);background:rgba(22,22,31,.85)}
+.nav button{flex:1;background:none;border:none;color:var(--text2);font-size:11px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;cursor:pointer;transition:.2s}
+.nav button.active{color:var(--accent2)}
+.nav button .icon{font-size:22px;line-height:1}
+
+.screen{display:none;padding:0 16px}
+.screen.active{display:block}
+
+.header{display:flex;justify-content:space-between;align-items:center;padding:8px 0 16px;position:sticky;top:0;background:var(--bg);z-index:10}
+.header h1{font-size:22px;font-weight:700}
+.header-btn{background:var(--surface2);border:none;color:var(--text);font-size:14px;padding:8px 14px;border-radius:10px;cursor:pointer}
+
+.week-strip{display:flex;gap:6px;margin-bottom:20px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 0}
+.week-strip::-webkit-scrollbar{display:none}
+.day-chip{flex:0 0 auto;min-width:52px;text-align:center;padding:10px 8px;border-radius:12px;background:var(--surface);cursor:pointer;transition:.2s;border:2px solid transparent}
+.day-chip.today{border-color:var(--accent)}
+.day-chip.selected{background:var(--accent);color:#fff}
+.day-chip .dow{font-size:11px;color:var(--text2);text-transform:uppercase;font-weight:600}
+.day-chip.selected .dow{color:rgba(255,255,255,.7)}
+.day-chip .dom{font-size:20px;font-weight:700;margin-top:2px}
+.day-chip .dots{display:flex;gap:3px;justify-content:center;margin-top:4px;min-height:8px}
+.day-chip .dots span{width:6px;height:6px;border-radius:50%}
+
+.card{background:var(--surface);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.card-title{font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+
+.session-card{background:var(--surface);border-radius:var(--radius);padding:16px;margin-bottom:12px;border-left:4px solid var(--accent);cursor:pointer;transition:.2s}
+.session-card:active{transform:scale(.98);background:var(--surface2)}
+.session-card.done{border-left-color:var(--green);opacity:.7}
+.session-card .type{font-size:13px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.session-card .detail{font-size:14px;color:var(--text2);margin-top:4px}
+.session-card.done .type::after{content:' ✓';color:var(--green)}
+
+.btn{display:block;width:100%;padding:16px;border:none;border-radius:var(--radius);font-size:17px;font-weight:600;cursor:pointer;transition:.2s;text-align:center}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-green{background:var(--green);color:#fff}
+.btn-outline{background:none;border:2px solid var(--surface3);color:var(--text)}
+.btn-danger{background:var(--red);color:#fff}
+
+.form-group{margin-bottom:16px}
+.form-label{font-size:13px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block}
+input[type="number"],input[type="text"],textarea,select{width:100%;background:var(--surface2);border:2px solid var(--surface3);border-radius:10px;padding:12px 14px;color:var(--text);font-size:16px;font-family:inherit;outline:none;transition:.2s}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:80px}
+
+.exercise-row{background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:8px}
+.exercise-row .ex-name{font-weight:600;margin-bottom:8px}
+
+.pullup-display{text-align:center;padding:20px 0}
+.pullup-display .current-program{font-size:28px;font-weight:800;color:var(--accent2);margin-bottom:4px}
+.pullup-display .current-weight{font-size:20px;color:var(--text2)}
+.pullup-display .session-type-label{font-size:14px;font-weight:700;color:var(--orange);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px}
+.pullup-series{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:20px 0}
+.pullup-series input{width:56px;height:56px;text-align:center;font-size:22px;font-weight:700;border-radius:14px}
+.pullup-series input.success{border-color:var(--green);color:var(--green)}
+.pullup-series input.fail{border-color:var(--red);color:var(--red)}
+
+.progress-bar{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;margin:8px 0}
+.progress-bar .fill{height:100%;border-radius:4px;transition:width .5s ease}
+.progress-green .fill{background:var(--green)}
+.progress-accent .fill{background:var(--accent)}
+
+/* 12-week timeline */
+.week-timeline{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;margin:16px 0}
+.week-timeline .wk{aspect-ratio:1;border-radius:6px;background:var(--surface3);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--text2);gap:1px}
+.week-timeline .wk.done{background:var(--green);color:#fff}
+.week-timeline .wk.current{background:var(--accent);color:#fff;box-shadow:0 0 12px rgba(108,92,231,.5)}
+.week-timeline .wk.deload{background:var(--orange);color:#000}
+.week-timeline .wk.deload.done{background:#2d6a4f;color:#fff}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;padding:20px 16px calc(var(--safe-bottom) + 20px);animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal h2{font-size:20px;font-weight:700;margin-bottom:16px;text-align:center}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text2);font-size:24px;cursor:pointer}
+
+.plan-day{background:var(--surface2);border-radius:12px;padding:12px;margin-bottom:8px}
+.plan-day .plan-day-name{font-weight:700;font-size:15px;margin-bottom:8px}
+.plan-day .plan-sessions{display:flex;flex-wrap:wrap;gap:6px}
+.plan-tag{padding:6px 12px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.2s}
+.plan-tag.active{opacity:1}
+.plan-tag.inactive{opacity:.4}
+.plan-tag:active{transform:scale(.95)}
+
+.history-item{background:var(--surface);border-radius:var(--radius);padding:14px;margin-bottom:8px}
+.history-item .date{font-size:12px;color:var(--text2)}
+.history-item .info{font-size:15px;font-weight:600;margin-top:4px}
+.history-item .reps{font-size:14px;color:var(--text2);margin-top:2px}
+
+.stat-row{display:flex;gap:10px;margin-bottom:12px}
+.stat-box{flex:1;background:var(--surface);border-radius:var(--radius);padding:14px;text-align:center}
+.stat-box .val{font-size:28px;font-weight:800}
+.stat-box .label{font-size:12px;color:var(--text2);margin-top:2px}
+
+.week-progress{margin-bottom:20px}
+.week-progress .count{font-size:14px;color:var(--text2);margin-bottom:6px}
+
+.empty{text-align:center;padding:40px 20px;color:var(--text2)}
+.empty .emoji{font-size:48px;margin-bottom:12px}
+.empty p{font-size:15px}
+
+.type-escalade{color:#e17055}.dot-escalade{background:#e17055}
+.type-poussee{color:#6c5ce7}.dot-poussee{background:#6c5ce7}
+.type-tractions{color:#74b9ff}.dot-tractions{background:#74b9ff}
+.type-repos{color:#636e72}.dot-repos{background:#636e72}
+.border-escalade{border-left-color:#e17055}
+.border-poussee{border-left-color:#6c5ce7}
+.border-tractions{border-left-color:#74b9ff}
+
+.deload-banner{background:linear-gradient(135deg,#fdcb6e33,#e1705533);border:1px solid var(--orange);border-radius:var(--radius);padding:14px;margin-bottom:16px;text-align:center;font-weight:600;color:var(--orange)}
+.test-banner{background:linear-gradient(135deg,#74b9ff33,#6c5ce733);border:1px solid var(--blue);border-radius:var(--radius);padding:14px;margin-bottom:16px;text-align:center;font-weight:600;color:var(--blue)}
+.objective-banner{background:var(--surface2);border-radius:10px;padding:10px;margin-top:8px;text-align:center;font-size:14px;color:var(--text2)}
+.objective-banner strong{color:var(--green)}
+.pain-banner{background:linear-gradient(135deg,#e1705533,#d6336c33);border:1px solid var(--red);border-radius:var(--radius);padding:14px;margin-bottom:16px;font-size:14px;color:var(--red)}
+
+/* Max test */
+.max-test-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--surface3)}
+.max-test-row .step-weight{font-size:18px;font-weight:700;min-width:80px}
+.max-test-row .step-reps{font-size:14px;color:var(--text2);flex:1}
+.max-test-row input{width:50px;text-align:center}
+.max-test-row .check{font-size:24px;cursor:pointer}
+
+.back-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;cursor:pointer;color:var(--text2);font-size:15px}
+.back-row:active{opacity:.6}
+
+.mt-8{margin-top:8px}.mt-16{margin-top:16px}.mb-8{margin-bottom:8px}.mb-16{margin-bottom:16px}
+.flex-between{display:flex;justify-content:space-between;align-items:center}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+<button class="active" onclick="showScreen('week')"><span class="icon">📅</span>Semaine</button>
+<button onclick="showScreen('pullups')"><span class="icon">🏋️</span>Tractions</button>
+<button onclick="showScreen('history')"><span class="icon">📊</span>Historique</button>
+<button onclick="showScreen('settings')"><span class="icon">⚙️</span>Reglages</button>
+</nav>
+
+<!-- WEEK -->
+<div id="screen-week" class="screen active">
+<div class="header">
+<button class="header-btn" onclick="changeWeek(-1)">←</button>
+<h1 id="week-title" style="font-size:18px;text-align:center;flex:1">Semaine</h1>
+<button class="header-btn" onclick="changeWeek(1)">→</button>
+</div>
+<div style="text-align:center;margin-bottom:12px">
+<button class="header-btn" onclick="goToday()" style="font-size:13px;margin-right:8px">Aujourd'hui</button>
+<button class="header-btn" onclick="openPlanning()" style="font-size:13px">Planifier</button>
+</div>
+<div class="week-progress">
+<div class="flex-between count" id="week-count"></div>
+<div class="progress-bar progress-green"><div class="fill" id="week-progress-fill"></div></div>
+</div>
+<div class="week-strip" id="week-strip"></div>
+<div id="day-sessions"></div>
+</div>
+
+<!-- SESSION: ESCALADE -->
+<div id="screen-session-escalade" class="screen">
+<div class="back-row" onclick="showScreen('week')">← Retour</div>
+<h1 style="margin-bottom:4px">🧗 Escalade</h1>
+<p class="mb-16" style="color:var(--text2)" id="session-escalade-date"></p>
+<div class="form-group">
+<label class="form-label">Duree (heures)</label>
+<input type="number" id="escalade-duration" step="0.5" min="0" max="8" placeholder="2">
+</div>
+<div class="form-group">
+<label class="form-label">Notes</label>
+<textarea id="escalade-notes" placeholder="Ressenti, voies reussies..."></textarea>
+</div>
+<button class="btn btn-green mt-16" onclick="saveEscalade()">Seance terminee ✓</button>
+</div>
+
+<!-- SESSION: POUSSEE -->
+<div id="screen-session-poussee" class="screen">
+<div class="back-row" onclick="showScreen('week')">← Retour</div>
+<h1 style="margin-bottom:4px">💪 Poussee</h1>
+<p class="mb-16" style="color:var(--text2)" id="session-poussee-date"></p>
+<div id="poussee-exercises"></div>
+<button class="btn btn-green mt-16" onclick="savePoussee()">Seance terminee ✓</button>
+</div>
+
+<!-- SESSION: TRACTIONS (normal A/B) -->
+<div id="screen-session-tractions" class="screen">
+<div class="back-row" onclick="showScreen('week')">← Retour</div>
+<h1 style="margin-bottom:4px">🏋️ Tractions lestees</h1>
+<p class="mb-16" style="color:var(--text2)" id="session-tractions-date"></p>
+<div id="tractions-banners"></div>
+<div class="pullup-display">
+<div class="session-type-label" id="tractions-type-label"></div>
+<div class="current-program" id="tractions-program"></div>
+<div class="current-weight" id="tractions-weight"></div>
+</div>
+<div id="tractions-pain-section" style="margin:12px 0">
+<div class="flex-between mb-8">
+<span style="font-size:14px;color:var(--text2)">Douleur coude :</span>
+<span id="pain-display" style="font-size:14px;font-weight:700">0/10</span>
+</div>
+<input type="range" id="pain-slider" min="0" max="10" value="0" style="width:100%;accent-color:var(--red)">
+</div>
+<div id="tractions-normal-section">
+<p style="text-align:center;color:var(--text2);font-size:14px;margin-bottom:8px">Reps realisees par serie :</p>
+<div class="pullup-series" id="tractions-inputs"></div>
+</div>
+<div id="tractions-iso-section" style="display:none;text-align:center;padding:20px 0">
+<p style="color:var(--red);font-weight:600;margin-bottom:16px">Mode isometrique (douleur > 4/10)</p>
+<p style="font-size:20px;font-weight:800;color:var(--accent2)" id="iso-program"></p>
+<p style="color:var(--text2);margin-top:8px">Maintenir la position haute, bras a 90deg</p>
+</div>
+<div id="tractions-result" style="text-align:center;margin-top:16px;font-size:15px;font-weight:600"></div>
+<button class="btn btn-green mt-16" onclick="saveTractions()">Valider la seance ✓</button>
+</div>
+
+<!-- SESSION: TEST MAX -->
+<div id="screen-session-testmax" class="screen">
+<div class="back-row" onclick="showScreen('week')">← Retour</div>
+<h1 style="margin-bottom:4px">🎯 Test Max</h1>
+<p class="mb-16" style="color:var(--text2)" id="session-testmax-date"></p>
+<div class="test-banner">Montee progressive — 1 rep par palier, repos 3-4 min a partir de +30kg</div>
+<div id="testmax-protocol"></div>
+<div class="form-group mt-16">
+<label class="form-label">Max atteint (kg)</label>
+<input type="number" id="testmax-result" step="1" min="0" placeholder="45">
+</div>
+<div id="testmax-objective" class="objective-banner"></div>
+<button class="btn btn-green mt-16" onclick="saveTestMax()">Valider le test ✓</button>
+</div>
+
+<!-- PULLUPS OVERVIEW -->
+<div id="screen-pullups" class="screen">
+<div class="header"><h1>🏋️ Programme Tractions</h1></div>
+<div class="stat-row">
+<div class="stat-box"><div class="val" id="pu-weight">0</div><div class="label">charge travail</div></div>
+<div class="stat-box"><div class="val" id="pu-week">-</div><div class="label">semaine</div></div>
+<div class="stat-box"><div class="val" id="pu-max">-</div><div class="label">max teste</div></div>
+</div>
+<div class="card">
+<div class="card-title">Semaines du programme (12)</div>
+<div class="week-timeline" id="pu-timeline"></div>
+<div style="font-size:13px;color:var(--text2);text-align:center;margin-top:8px" id="pu-next-info"></div>
+</div>
+<div class="card">
+<div class="card-title">Objectif final : +60 kg</div>
+<div class="progress-bar progress-green"><div class="fill" id="pu-goal-fill"></div></div>
+<div class="flex-between" style="font-size:13px;color:var(--text2);margin-top:6px">
+<span>+30 kg</span><span id="pu-goal-text"></span><span>+60 kg</span>
+</div>
+</div>
+<div class="card">
+<div class="card-title">Historique tractions</div>
+<div id="pu-history"></div>
+</div>
+</div>
+
+<!-- HISTORY -->
+<div id="screen-history" class="screen">
+<div class="header"><h1>📊 Historique</h1></div>
+<div class="stat-row" id="history-stats"></div>
+<div id="history-list"></div>
+</div>
+
+<!-- SETTINGS -->
+<div id="screen-settings" class="screen">
+<div class="header"><h1>⚙️ Reglages</h1></div>
+<div class="card">
+<div class="card-title">Programme tractions</div>
+<div class="form-group">
+<label class="form-label">Charge de travail depart (kg)</label>
+<input type="number" id="set-start-weight" step="1" min="0" value="30">
+</div>
+<div class="form-group">
+<label class="form-label">Semaine de depart (1-12)</label>
+<input type="number" id="set-start-week" min="1" max="12" value="1">
+</div>
+<div class="form-group">
+<label class="form-label">1RM actuel (kg)</label>
+<input type="number" id="set-current-max" step="1" min="0" value="42">
+</div>
+<div class="form-group">
+<label class="form-label">Objectif final (kg)</label>
+<input type="number" id="set-goal" step="1" min="0" value="60">
+</div>
+<div class="form-group">
+<label class="form-label">Date debut programme</label>
+<input type="text" id="set-start-date" value="2026-03-30" placeholder="AAAA-MM-JJ">
+</div>
+<button class="btn btn-primary" onclick="saveSettings()">Sauvegarder</button>
+</div>
+<div class="card mt-16">
+<div class="card-title">Donnees</div>
+<button class="btn btn-outline mb-8" onclick="exportData()">Exporter (JSON)</button>
+<button class="btn btn-danger" onclick="resetData()">Reinitialiser</button>
+</div>
+</div>
+
+<!-- PLANNING MODAL -->
+<div class="modal-overlay" id="planning-modal">
+<div class="modal" style="position:relative">
+<button class="modal-close" onclick="closePlanning()">✕</button>
+<h2>Planifier la semaine</h2>
+<div id="planning-quotas" style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:16px"></div>
+<div id="planning-days"></div>
+<button class="btn btn-primary mt-16" onclick="savePlanning()">Valider</button>
+</div>
+</div>
+
+<script>
+// === CONFIG ===
+const SESSION_TYPES = [
+  {id:'escalade',name:'Escalade',emoji:'🧗',color:'#e17055'},
+  {id:'poussee',name:'Poussee',emoji:'💪',color:'#6c5ce7'},
+  {id:'tractions',name:'Tractions',emoji:'🏋️',color:'#74b9ff'},
+  {id:'repos',name:'Repos',emoji:'😴',color:'#636e72'}
+];
+const DAYS_FR = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+const POUSSEE_EXERCISES = [
+  {id:'dips-lestes',name:'Dips lestes',hasWeight:true,defaultSets:3,defaultReps:8},
+  {id:'dips-pdc',name:'Dips poids de corps',hasWeight:false,defaultSets:2,defaultReps:35},
+  {id:'pompes-declinees',name:'Pompes declinees',hasWeight:false,defaultSets:5,defaultReps:19},
+  {id:'pompes-declinees-wide',name:'Pompes declinees wide',hasWeight:false,defaultSets:2,defaultReps:17},
+  {id:'pompes-anneaux',name:'Pompes anneaux ecartees',hasWeight:false,defaultSets:2,defaultReps:10}
+];
+
+// Programme 12 semaines : type A (force) / B (volume) / D (decharge+test)
+// Semaines impaires (1,3,5,7,9,11) = A, paires non-decharge (2,6,10) = B, decharge (4,8,12) = D
+function getWeekType(weekNum){
+  if(weekNum%4===0) return 'D'; // decharge
+  if(weekNum%2===1) return 'A'; // force
+  return 'B'; // volume
+}
+function getWeekCharge(weekNum, baseWeight){
+  // Charge lourde = base + (weekNum-1)*2
+  // But resets each phase: phase1=w1-4, phase2=w5-8, phase3=w9-12
+  const phase = Math.floor((weekNum-1)/4); // 0,1,2
+  const weekInPhase = ((weekNum-1)%4); // 0,1,2,3
+  return baseWeight + phase*8 + weekInPhase*2;
+}
+function getSessionSpec(weekNum, baseWeight){
+  const type = getWeekType(weekNum);
+  const heavyCharge = getWeekCharge(weekNum, baseWeight);
+  if(type==='A') return {type:'A',label:'Seance A — Force',sets:5,reps:3,weight:heavyCharge};
+  if(type==='B') return {type:'B',label:'Seance B — Volume',sets:4,reps:5,weight:heavyCharge-8};
+  // Decharge
+  return {type:'D',label:'Decharge + Test Max',sets:3,reps:5,weight:heavyCharge-15,isDeload:true};
+}
+function getPhaseObjective(weekNum){
+  if(weekNum<=4) return {week:4,target:45,label:'Test S4 : objectif >= +45 kg'};
+  if(weekNum<=8) return {week:8,target:52,label:'Test S8 : objectif >= +52 kg'};
+  return {week:12,target:60,label:'Test S12 : objectif >= +60 kg'};
+}
+
+// === DATA ===
+function getDefaultData(){
+  return {
+    program:{baseWeight:30,currentWeek:1,startDate:'2026-03-30',goal:60,currentMax:42,
+             consecutiveFails:0,bonusWeight:0},
+    weekPlan:{},
+    sessions:[]
+  };
+}
+function load(){try{return JSON.parse(localStorage.getItem('sport-tracker2'))||getDefaultData()}catch(e){return getDefaultData()}}
+function save(d){localStorage.setItem('sport-tracker2',JSON.stringify(d))}
+let data=load();
+let selectedDate=new Date();
+let currentSessionKey=null;
+
+// === UTILS ===
+function dateKey(d){return d.toISOString().slice(0,10)}
+function getMonday(d){const dt=new Date(d);const day=dt.getDay();const diff=dt.getDate()-day+(day===0?-6:1);dt.setDate(diff);dt.setHours(0,0,0,0);return dt}
+function formatDate(d){return d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}
+
+// === NAV ===
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  document.querySelectorAll('.nav button').forEach((b,i)=>{
+    const screens=['week','pullups','history','settings'];
+    b.classList.toggle('active',screens[i]===id);
+  });
+  if(id==='week')renderWeek();
+  if(id==='pullups')renderPullups();
+  if(id==='history')renderHistory();
+  if(id==='settings')renderSettings();
+}
+
+// === WEEK VIEW ===
+function renderWeek(){
+  const monday=getMonday(selectedDate);
+  const today=dateKey(new Date());
+  document.getElementById('week-title').textContent=`${formatDate(monday)} - ${formatDate(new Date(monday.getTime()+6*86400000))}`;
+  const strip=document.getElementById('week-strip');
+  strip.innerHTML='';
+  let done=0,total=0;
+  for(let i=0;i<7;i++){
+    const d=new Date(monday.getTime()+i*86400000);
+    const dk=dateKey(d);
+    const planned=(data.weekPlan[dk]||[]).filter(t=>t!=='repos');
+    total+=planned.length;
+    done+=Math.min(data.sessions.filter(s=>s.date===dk).length,planned.length);
+    const chip=document.createElement('div');
+    chip.className='day-chip'+(dk===today?' today':'')+(dk===dateKey(selectedDate)?' selected':'');
+    chip.innerHTML=`<div class="dow">${DAYS_FR[d.getDay()]}</div><div class="dom">${d.getDate()}</div><div class="dots">${(data.weekPlan[dk]||[]).map(t=>`<span class="dot-${t}"></span>`).join('')}</div>`;
+    chip.onclick=()=>{selectedDate=new Date(d);renderWeek()};
+    strip.appendChild(chip);
+  }
+  const pct=total?Math.round(done/total*100):0;
+  document.getElementById('week-count').textContent=`${done}/${total} seances`;
+  document.getElementById('week-progress-fill').style.width=pct+'%';
+
+  const dk=dateKey(selectedDate);
+  const planned=data.weekPlan[dk]||[];
+  const container=document.getElementById('day-sessions');
+  if(!planned.length){
+    container.innerHTML=`<div class="empty"><div class="emoji">📋</div><p>Rien de prevu ce jour.<br>Utilise "Planifier" pour organiser ta semaine.</p></div>`;
+    return;
+  }
+  container.innerHTML='';
+  planned.forEach((typeId,idx)=>{
+    const type=SESSION_TYPES.find(t=>t.id===typeId);
+    const sessionDone=data.sessions.find(s=>s.date===dk&&s.type===typeId&&s.index===idx);
+    const div=document.createElement('div');
+    div.className=`session-card border-${typeId}`+(sessionDone?' done':'');
+    let detail='';
+    if(sessionDone){
+      if(typeId==='escalade') detail=sessionDone.duration?`${sessionDone.duration}h`:'';
+      if(typeId==='tractions') detail=sessionDone.label||'';
+      if(typeId==='poussee') detail='Terminee';
+    } else if(typeId==='tractions'){
+      const wk=data.program.currentWeek;
+      const spec=getSessionSpec(wk,data.program.baseWeight+data.program.bonusWeight);
+      if(spec.type==='D') detail=`S${wk} — Decharge + Test max`;
+      else detail=`S${wk} — ${spec.sets}x${spec.reps} a +${spec.weight}kg`;
+    }
+    div.innerHTML=`<div class="type type-${typeId}">${type.emoji} ${type.name}</div>${typeId==='repos'?'':`<div class="detail">${detail}</div>`}`;
+    if(typeId!=='repos'&&!sessionDone){
+      div.onclick=()=>openSession(typeId,dk,idx);
+    }
+    container.appendChild(div);
+  });
+}
+
+// === OPEN SESSION ===
+function openSession(typeId,date,index){
+  currentSessionKey={type:typeId,date,index};
+  if(typeId==='escalade'){
+    document.getElementById('session-escalade-date').textContent=date;
+    document.getElementById('escalade-duration').value='';
+    document.getElementById('escalade-notes').value='';
+    showScreen('session-escalade');
+  } else if(typeId==='poussee'){
+    document.getElementById('session-poussee-date').textContent=date;
+    renderPousseeExercises();
+    showScreen('session-poussee');
+  } else if(typeId==='tractions'){
+    const spec=getSessionSpec(data.program.currentWeek,data.program.baseWeight+data.program.bonusWeight);
+    if(spec.type==='D'){
+      // Decharge week has 2 parts: light session then test max
+      // Check if light session already done this week
+      const monday=getMonday(new Date(date));
+      const weekDates=[];
+      for(let i=0;i<7;i++) weekDates.push(dateKey(new Date(monday.getTime()+i*86400000)));
+      const lightDone=data.sessions.find(s=>weekDates.includes(s.date)&&s.type==='tractions'&&s.subtype==='deload-light');
+      if(!lightDone){
+        // Show light deload session
+        document.getElementById('session-tractions-date').textContent=date;
+        renderTractionsSession(spec,false);
+        showScreen('session-tractions');
+      } else {
+        // Show test max
+        document.getElementById('session-testmax-date').textContent=date;
+        renderTestMax();
+        showScreen('session-testmax');
+      }
+    } else {
+      document.getElementById('session-tractions-date').textContent=date;
+      renderTractionsSession(spec,false);
+      showScreen('session-tractions');
+    }
+  }
+}
+
+// === ESCALADE ===
+function saveEscalade(){
+  data.sessions.push({...currentSessionKey,duration:parseFloat(document.getElementById('escalade-duration').value)||0,notes:document.getElementById('escalade-notes').value,timestamp:Date.now()});
+  save(data);showScreen('week');
+}
+
+// === POUSSEE ===
+function renderPousseeExercises(){
+  const c=document.getElementById('poussee-exercises');c.innerHTML='';
+  POUSSEE_EXERCISES.forEach(ex=>{
+    const div=document.createElement('div');div.className='exercise-row';
+    let html='';
+    if(ex.hasWeight) html+=`<div class="form-group"><label class="form-label">Charge (kg)</label><input type="number" class="ex-weight" data-ex="${ex.id}" step="1" min="0" placeholder="40"></div>`;
+    html+=`<div style="display:flex;gap:8px"><div class="form-group" style="flex:1"><label class="form-label">Series</label><input type="number" class="ex-sets" data-ex="${ex.id}" min="1" max="20" value="${ex.defaultSets}"></div><div class="form-group" style="flex:1"><label class="form-label">Reps</label><input type="number" class="ex-reps" data-ex="${ex.id}" min="1" max="50" placeholder="${ex.defaultReps}"></div></div>`;
+    div.innerHTML=`<div class="ex-name">${ex.name}</div>${html}`;
+    c.appendChild(div);
+  });
+}
+function savePoussee(){
+  const exData=POUSSEE_EXERCISES.map(ex=>{
+    const w=document.querySelector(`.ex-weight[data-ex="${ex.id}"]`);
+    const s=document.querySelector(`.ex-sets[data-ex="${ex.id}"]`);
+    const r=document.querySelector(`.ex-reps[data-ex="${ex.id}"]`);
+    return{id:ex.id,name:ex.name,weight:w?+w.value:0,sets:s?+s.value:0,reps:r?+r.value:0};
+  });
+  data.sessions.push({...currentSessionKey,exercises:exData,timestamp:Date.now()});
+  save(data);showScreen('week');
+}
+
+// === TRACTIONS ===
+function renderTractionsSession(spec,isIso){
+  const wk=data.program.currentWeek;
+  const banners=document.getElementById('tractions-banners');
+  banners.innerHTML='';
+  const painSlider=document.getElementById('pain-slider');
+  painSlider.value=0;
+  document.getElementById('pain-display').textContent='0/10';
+  painSlider.oninput=()=>{
+    const v=+painSlider.value;
+    document.getElementById('pain-display').textContent=v+'/10';
+    if(v>4){
+      document.getElementById('tractions-normal-section').style.display='none';
+      document.getElementById('tractions-iso-section').style.display='block';
+      const isoW=Math.round(spec.weight*0.5);
+      document.getElementById('iso-program').textContent=`4 x 20s isometrique a +${isoW}kg`;
+    } else {
+      document.getElementById('tractions-normal-section').style.display='block';
+      document.getElementById('tractions-iso-section').style.display='none';
+    }
+  };
+  document.getElementById('tractions-normal-section').style.display='block';
+  document.getElementById('tractions-iso-section').style.display='none';
+
+  if(spec.type==='D'){
+    banners.innerHTML=`<div class="deload-banner">Semaine ${wk} — Decharge legere<br>Seance test max a faire apres</div>`;
+    document.getElementById('tractions-type-label').textContent='Decharge';
+  } else {
+    document.getElementById('tractions-type-label').textContent=spec.type==='A'?'Seance A — Force':'Seance B — Volume';
+    const obj=getPhaseObjective(wk);
+    banners.innerHTML=`<div class="objective-banner">Semaine ${wk}/12 · ${obj.label}</div>`;
+  }
+  document.getElementById('tractions-program').textContent=`${spec.sets} x ${spec.reps}`;
+  document.getElementById('tractions-weight').textContent=`+${spec.weight} kg`;
+
+  const container=document.getElementById('tractions-inputs');
+  container.innerHTML='';
+  for(let i=0;i<spec.sets;i++){
+    const inp=document.createElement('input');
+    inp.type='number';inp.min='0';inp.max='20';inp.placeholder=spec.reps;
+    inp.className='set-input';inp.dataset.target=spec.reps;
+    inp.oninput=()=>{
+      inp.classList.toggle('success',+inp.value>=spec.reps);
+      inp.classList.toggle('fail',+inp.value>0&&+inp.value<spec.reps);
+      updateTractionsResult(spec);
+    };
+    container.appendChild(inp);
+  }
+  document.getElementById('tractions-result').textContent='';
+}
+
+function updateTractionsResult(spec){
+  const inputs=[...document.querySelectorAll('#tractions-inputs input')];
+  if(!inputs.every(i=>i.value!=='')){document.getElementById('tractions-result').textContent='';return;}
+  const allGood=inputs.every(i=>+i.value>=spec.reps);
+  const el=document.getElementById('tractions-result');
+  const wk=data.program.currentWeek;
+  if(allGood){
+    const nextWk=Math.min(wk+1,12);
+    const nextSpec=getSessionSpec(nextWk,data.program.baseWeight+data.program.bonusWeight);
+    if(spec.type==='D'){
+      el.innerHTML=`<span style="color:var(--green)">Decharge OK. Passe au test max !</span>`;
+    } else {
+      el.innerHTML=`<span style="color:var(--green)">Reussi ! Semaine ${nextWk} : ${nextSpec.type==='D'?'Decharge + Test':nextSpec.sets+'x'+nextSpec.reps+' +'+nextSpec.weight+'kg'}</span>`;
+    }
+  } else {
+    const fails=data.program.consecutiveFails+1;
+    if(fails>=2){
+      el.innerHTML=`<span style="color:var(--red)">2e echec consecutif. Charge -2kg la prochaine fois.</span>`;
+    } else {
+      el.innerHTML=`<span style="color:var(--orange)">Echec. On reste a la meme charge semaine prochaine.</span>`;
+    }
+  }
+}
+
+function saveTractions(){
+  const painVal=+document.getElementById('pain-slider').value;
+  if(painVal>4){
+    // Save isometric session
+    const wk=data.program.currentWeek;
+    const spec=getSessionSpec(wk,data.program.baseWeight+data.program.bonusWeight);
+    data.sessions.push({...currentSessionKey,subtype:'isometric',weekNum:wk,
+      label:`S${wk} Isometrique +${Math.round(spec.weight*0.5)}kg`,pain:painVal,timestamp:Date.now()});
+    // Don't advance week
+    save(data);showScreen('week');return;
+  }
+  const inputs=[...document.querySelectorAll('#tractions-inputs input')];
+  if(inputs.some(i=>i.value==='')){alert('Remplis toutes les series');return;}
+  const wk=data.program.currentWeek;
+  const spec=getSessionSpec(wk,data.program.baseWeight+data.program.bonusWeight);
+  const reps=inputs.map(i=>+i.value);
+  const allGood=reps.every(r=>r>=spec.reps);
+
+  const subtype=spec.type==='D'?'deload-light':spec.type.toLowerCase();
+  data.sessions.push({...currentSessionKey,subtype,weekNum:wk,
+    reps,targetSets:spec.sets,targetReps:spec.reps,weight:spec.weight,
+    label:`S${wk} ${spec.type} ${spec.sets}x${spec.reps} +${spec.weight}kg`,
+    success:allGood,pain:painVal,timestamp:Date.now()});
+
+  if(spec.type!=='D'){
+    if(allGood){
+      data.program.consecutiveFails=0;
+      data.program.currentWeek=Math.min(wk+1,12);
+    } else {
+      data.program.consecutiveFails++;
+      if(data.program.consecutiveFails>=2){
+        data.program.baseWeight=Math.max(data.program.baseWeight-2,20);
+        data.program.consecutiveFails=0;
+      }
+      // Stay on same week (don't advance)
+    }
+  } else {
+    // Deload light done, don't advance yet — test max will advance
+  }
+  save(data);showScreen('week');
+}
+
+// === TEST MAX ===
+function renderTestMax(){
+  const wk=data.program.currentWeek;
+  const obj=getPhaseObjective(wk);
+  document.getElementById('testmax-objective').innerHTML=`Objectif : <strong>>= +${obj.target} kg</strong>`;
+  const protocol=document.getElementById('testmax-protocol');
+  const steps=[
+    {w:'Vide',r:'10 reps',note:'Echauffement'},
+    {w:'+10 kg',r:'5 reps',note:''},
+    {w:'+20 kg',r:'3 reps',note:''},
+    {w:'+30 kg',r:'2 reps',note:'Repos 3-4 min apres'},
+    {w:'+35 kg',r:'1 rep',note:''},
+    {w:'+38 kg',r:'1 rep',note:''},
+    {w:'+40 kg',r:'1 rep',note:''},
+    {w:'+42 kg',r:'1 rep',note:''},
+    {w:'+45 kg',r:'1 rep',note:''},
+    {w:'+48 kg',r:'1 rep',note:''},
+    {w:'+50 kg',r:'1 rep',note:''},
+    {w:'+53 kg',r:'1 rep',note:''},
+    {w:'+55 kg',r:'1 rep',note:''},
+    {w:'+58 kg',r:'1 rep',note:''},
+    {w:'+60 kg',r:'1 rep',note:'OBJECTIF FINAL'}
+  ];
+  protocol.innerHTML=steps.map(s=>`<div class="max-test-row"><div class="step-weight">${s.w}</div><div class="step-reps">${s.r} ${s.note?'<span style="color:var(--orange);font-size:12px">'+s.note+'</span>':''}</div></div>`).join('');
+}
+
+function saveTestMax(){
+  const maxVal=+document.getElementById('testmax-result').value;
+  if(!maxVal){alert('Renseigne ton max');return;}
+  const wk=data.program.currentWeek;
+  const obj=getPhaseObjective(wk);
+
+  data.sessions.push({...currentSessionKey,subtype:'test-max',weekNum:wk,
+    maxResult:maxVal,label:`S${wk} Test Max: +${maxVal}kg`,
+    success:maxVal>=obj.target,timestamp:Date.now()});
+
+  data.program.currentMax=Math.max(data.program.currentMax,maxVal);
+
+  // Bonus adjustment if exceeds target
+  if(wk===4&&maxVal>=obj.target+2) data.program.bonusWeight+=2;
+  if(wk===8&&maxVal>=obj.target) data.program.bonusWeight+=2;
+
+  // Advance to next week
+  data.program.currentWeek=Math.min(wk+1,12);
+  data.program.consecutiveFails=0;
+
+  save(data);showScreen('week');
+}
+
+// === PULLUPS OVERVIEW ===
+function renderPullups(){
+  const p=data.program;
+  const baseW=p.baseWeight+p.bonusWeight;
+  const spec=getSessionSpec(p.currentWeek,baseW);
+  document.getElementById('pu-weight').textContent='+'+spec.weight;
+  document.getElementById('pu-week').textContent=p.currentWeek+'/12';
+  document.getElementById('pu-max').textContent='+'+p.currentMax;
+
+  // Timeline
+  const tl=document.getElementById('pu-timeline');
+  tl.innerHTML='';
+  for(let w=1;w<=12;w++){
+    const div=document.createElement('div');
+    const wType=getWeekType(w);
+    const isDone=w<p.currentWeek;
+    const isCurrent=w===p.currentWeek;
+    const isDeload=wType==='D';
+    div.className='wk'+(isDone?' done':'')+(isCurrent?' current':'')+(isDeload?' deload':'');
+    div.innerHTML=`<span>S${w}</span><span style="font-size:8px">${wType==='A'?'Force':wType==='B'?'Vol':'Test'}</span>`;
+    tl.appendChild(div);
+  }
+
+  const nextInfo=document.getElementById('pu-next-info');
+  if(p.currentWeek<=12){
+    const nextSpec=getSessionSpec(p.currentWeek,baseW);
+    nextInfo.textContent=`Prochaine : S${p.currentWeek} ${nextSpec.label}`;
+  } else {
+    nextInfo.textContent='Programme termine !';
+  }
+
+  // Goal progress
+  const maxW=p.currentMax;
+  const goalPct=Math.min(100,Math.round(((maxW-30)/(p.goal-30))*100));
+  document.getElementById('pu-goal-fill').style.width=goalPct+'%';
+  document.getElementById('pu-goal-text').textContent=`+${maxW} kg (${goalPct}%)`;
+
+  // History
+  const hist=document.getElementById('pu-history');
+  const trSessions=data.sessions.filter(s=>s.type==='tractions').sort((a,b)=>b.timestamp-a.timestamp);
+  if(!trSessions.length){hist.innerHTML='<div class="empty"><p>Pas encore de seance</p></div>';return;}
+  hist.innerHTML=trSessions.slice(0,20).map(s=>{
+    let icon=s.success?'✅':'❌';
+    if(s.subtype==='isometric') icon='🔸';
+    if(s.subtype==='test-max') icon=s.success?'🎯':'🎯';
+    return `<div class="history-item"><div class="date">${s.date} · ${icon}</div><div class="info">${s.label||''}</div>${s.reps?`<div class="reps">Reps: ${s.reps.join(' / ')}</div>`:''}${s.maxResult?`<div class="reps">Max: +${s.maxResult}kg</div>`:''}</div>`;
+  }).join('');
+}
+
+// === HISTORY ===
+function renderHistory(){
+  const sessions=data.sessions.sort((a,b)=>b.timestamp-a.timestamp);
+  const thisMonth=dateKey(new Date()).slice(0,7);
+  const monthSessions=sessions.filter(s=>s.date.startsWith(thisMonth));
+  document.getElementById('history-stats').innerHTML=`<div class="stat-box"><div class="val">${sessions.length}</div><div class="label">total</div></div><div class="stat-box"><div class="val">${monthSessions.length}</div><div class="label">ce mois</div></div><div class="stat-box"><div class="val">${sessions.filter(s=>s.type==='escalade').length}</div><div class="label">escalade</div></div>`;
+  const list=document.getElementById('history-list');
+  if(!sessions.length){list.innerHTML='<div class="empty"><p>Pas encore de seance</p></div>';return;}
+  list.innerHTML=sessions.slice(0,50).map(s=>{
+    const type=SESSION_TYPES.find(t=>t.id===s.type);
+    let detail='';
+    if(s.type==='escalade') detail=`${s.duration||0}h${s.notes?' - '+s.notes.slice(0,40):''}`;
+    if(s.type==='tractions') detail=s.label||'';
+    if(s.type==='poussee') detail=(s.exercises||[]).map(e=>`${e.name}: ${e.weight?e.weight+'kg ':''}${e.sets}x${e.reps}`).join(', ');
+    return `<div class="history-item"><div class="date">${s.date} · ${type?type.emoji+' '+type.name:s.type}</div><div class="info">${detail}</div></div>`;
+  }).join('');
+}
+
+// === SETTINGS ===
+function renderSettings(){
+  document.getElementById('set-start-weight').value=data.program.baseWeight;
+  document.getElementById('set-start-week').value=data.program.currentWeek;
+  document.getElementById('set-current-max').value=data.program.currentMax;
+  document.getElementById('set-goal').value=data.program.goal;
+  document.getElementById('set-start-date').value=data.program.startDate;
+}
+function saveSettings(){
+  data.program.baseWeight=+document.getElementById('set-start-weight').value||30;
+  data.program.currentWeek=Math.min(Math.max(+document.getElementById('set-start-week').value||1,1),12);
+  data.program.currentMax=+document.getElementById('set-current-max').value||42;
+  data.program.goal=+document.getElementById('set-goal').value||60;
+  data.program.startDate=document.getElementById('set-start-date').value||'2026-03-30';
+  save(data);alert('Sauvegarde !');
+}
+function exportData(){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sport-tracker-export.json';a.click();
+}
+function resetData(){
+  if(confirm('Supprimer toutes les donnees ?')){data=getDefaultData();save(data);showScreen('week');}
+}
+
+// === PLANNING ===
+const WEEK_QUOTAS = {escalade:3,poussee:2,tractions:1,repos:1};
+let planningMonday=null;
+
+function countPlanned(){
+  const counts={escalade:0,poussee:0,tractions:0,repos:0};
+  for(let i=0;i<7;i++){
+    const dk=dateKey(new Date(planningMonday.getTime()+i*86400000));
+    (data.weekPlan[dk]||[]).forEach(t=>{if(counts[t]!==undefined)counts[t]++});
+  }
+  return counts;
+}
+function updateQuotas(){
+  const counts=countPlanned();
+  const el=document.getElementById('planning-quotas');
+  el.innerHTML=SESSION_TYPES.map(t=>{
+    const q=WEEK_QUOTAS[t.id];
+    const c=counts[t.id]||0;
+    const ok=c===q;const over=c>q;
+    const color=ok?'var(--green)':over?'var(--red)':'var(--text2)';
+    return `<span style="font-size:14px;font-weight:700;color:${color}">${t.emoji} ${c}/${q}</span>`;
+  }).join('');
+}
+function openPlanning(){
+  planningMonday=getMonday(selectedDate);
+  const c=document.getElementById('planning-days');c.innerHTML='';
+  for(let i=0;i<7;i++){
+    const d=new Date(planningMonday.getTime()+i*86400000);
+    const dk=dateKey(d);
+    const current=data.weekPlan[dk]||[];
+    const div=document.createElement('div');div.className='plan-day';
+    div.innerHTML=`<div class="plan-day-name">${DAYS_FR[d.getDay()]} ${d.getDate()}</div><div class="plan-sessions" data-date="${dk}">${SESSION_TYPES.map(t=>{
+      const isActive=current.includes(t.id);
+      return `<button class="plan-tag ${isActive?'active':'inactive'}" style="background:${t.color}${isActive?'':'44'};color:${isActive?'#fff':t.color}" data-type="${t.id}" onclick="togglePlanTag(this,'${dk}','${t.id}')">${t.emoji}</button>`;
+    }).join('')}</div>`;
+    c.appendChild(div);
+  }
+  updateQuotas();
+  document.getElementById('planning-modal').classList.add('open');
+}
+function closePlanning(){document.getElementById('planning-modal').classList.remove('open')}
+function togglePlanTag(btn,date,typeId){
+  if(!data.weekPlan[date])data.weekPlan[date]=[];
+  const arr=data.weekPlan[date];
+  const idx=arr.indexOf(typeId);
+  const t=SESSION_TYPES.find(t=>t.id===typeId);
+  if(idx>=0){arr.splice(idx,1);btn.classList.replace('active','inactive');btn.style.background=t.color+'44';btn.style.color=t.color;}
+  else{arr.push(typeId);btn.classList.replace('inactive','active');btn.style.background=t.color;btn.style.color='#fff';}
+  updateQuotas();
+}
+function savePlanning(){save(data);closePlanning();renderWeek();}
+
+function changeWeek(dir){selectedDate=new Date(selectedDate.getTime()+dir*7*86400000);renderWeek();}
+function goToday(){selectedDate=new Date();renderWeek();}
+
+// === INIT ===
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+renderWeek();
+</script>
+</body>
+</html>
