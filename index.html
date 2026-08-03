@@ -251,9 +251,29 @@ textarea{resize:vertical;min-height:80px}
 <button class="btn btn-green mt-16" onclick="saveTestMax()">Valider le test ✓</button>
 </div>
 
+<!-- RECALIBRAGE -->
+<div id="screen-recalibrate" class="screen">
+<div class="back-row" onclick="showScreen('pullups')">← Retour</div>
+<h1 style="margin-bottom:4px">🔄 Recalibrage</h1>
+<p class="mb-16" style="color:var(--text2)">Nouveau depart : suspension complete bras tendus, pieds dans le vide</p>
+<div class="test-banner">Le depart bras tendus strict est mecaniquement plus dur : une baisse de 10 a 15% du max est normale et attendue. Re-teste ton max dans les nouvelles conditions, puis tout le cycle est recalcule.</div>
+<div class="card">
+<div class="card-title">Protocole de re-test (1 rep par palier, repos 3-4 min sur les singles)</div>
+<div id="recal-protocol"></div>
+</div>
+<div class="form-group mt-16">
+<label class="form-label">Nouveau max bras tendus (kg)</label>
+<input type="number" id="recal-result" step="1" min="0">
+</div>
+<p style="font-size:13px;color:var(--text2);margin-bottom:12px" id="recal-estimate"></p>
+<button class="btn btn-primary" onclick="saveRecalibration()">Valider et recalculer le cycle ✓</button>
+<button class="btn btn-outline mt-8" onclick="showScreen('pullups')">Annuler</button>
+</div>
+
 <!-- PULLUPS OVERVIEW -->
 <div id="screen-pullups" class="screen">
 <div class="header"><h1>🏋️ Programme Tractions</h1></div>
+<div id="pu-strict"></div>
 <div class="stat-row">
 <div class="stat-box"><div class="val" id="pu-weight">0</div><div class="label">charge travail</div></div>
 <div class="stat-box"><div class="val" id="pu-week">-</div><div class="label">semaine</div></div>
@@ -265,12 +285,13 @@ textarea{resize:vertical;min-height:80px}
 <div style="font-size:13px;color:var(--text2);text-align:center;margin-top:8px" id="pu-next-info"></div>
 </div>
 <div class="card">
-<div class="card-title">Objectif final : +60 kg</div>
+<div class="card-title" id="pu-goal-title">Objectif final : +60 kg</div>
 <div class="progress-bar progress-green"><div class="fill" id="pu-goal-fill"></div></div>
 <div class="flex-between" style="font-size:13px;color:var(--text2);margin-top:6px">
-<span>+30 kg</span><span id="pu-goal-text"></span><span>+60 kg</span>
+<span id="pu-goal-min">+30 kg</span><span id="pu-goal-text"></span><span id="pu-goal-max">+60 kg</span>
 </div>
 </div>
+<button class="btn btn-outline" style="margin-bottom:12px" onclick="openRecalibrate()">🔄 Recalibrage depart bras tendus</button>
 <div class="card">
 <div class="card-title">Historique tractions</div>
 <div id="pu-history"></div>
@@ -310,6 +331,7 @@ textarea{resize:vertical;min-height:80px}
 <input type="text" id="set-start-date" value="2026-03-30" placeholder="AAAA-MM-JJ">
 </div>
 <button class="btn btn-primary" onclick="saveSettings()">Sauvegarder</button>
+<button class="btn btn-outline mt-8" onclick="openRecalibrate()">🔄 Recalibrage depart bras tendus</button>
 </div>
 <div class="card mt-16">
 <div class="card-title">Donnees</div>
@@ -369,21 +391,54 @@ function getSessionSpec(weekNum, baseWeight){
   return {type:'D',label:'Decharge + Test Max',sets:3,reps:5,weight:heavyCharge-15,isDeload:true};
 }
 function getPhaseObjective(weekNum){
-  if(weekNum<=4) return {week:4,target:45,label:'Test S4 : objectif >= +45 kg'};
-  if(weekNum<=8) return {week:8,target:52,label:'Test S8 : objectif >= +52 kg'};
-  return {week:12,target:60,label:'Test S12 : objectif >= +60 kg'};
+  // Objectifs relatifs au max de depart du cycle (memes ecarts que le plan initial 42 -> 45/52/60)
+  const start=data.program.cycleStartMax||data.program.currentMax||40;
+  const goal=data.program.goal||60;
+  const t4=Math.min(goal,start+3),t8=Math.min(goal,start+10),t12=Math.min(goal,start+18);
+  if(weekNum<=4) return {week:4,target:t4,label:'Test S4 : objectif >= +'+t4+' kg'};
+  if(weekNum<=8) return {week:8,target:t8,label:'Test S8 : objectif >= +'+t8+' kg'};
+  return {week:12,target:t12,label:'Test S12 : objectif >= +'+t12+' kg'};
+}
+
+// Echelle de test dynamique autour d'un max de reference
+function buildTestLadder(refMax,target){
+  const r5=v=>Math.max(5,Math.round(v/5)*5);
+  const w25=r5(refMax*0.25),w50=r5(refMax*0.5),w70=r5(refMax*0.7);
+  const steps=[
+    {w:'Vide',r:'10 reps',note:'Echauffement'},
+    {w:'+'+w25+' kg',r:'5 reps',note:''},
+    {w:'+'+w50+' kg',r:'3 reps',note:''},
+    {w:'+'+w70+' kg',r:'2 reps',note:'Repos 3-4 min apres'}
+  ];
+  const top=Math.max(target,refMax+2);
+  const singles=[refMax-6,refMax-3,refMax-1];
+  let w=refMax+1;
+  while(w<top){singles.push(w);w+=2;}
+  singles.push(top);
+  const seen=new Set();
+  singles.forEach(x=>{
+    if(x>w70&&!seen.has(x)){seen.add(x);steps.push({w:'+'+x+' kg',r:'1 rep',note:x>=target?'OBJECTIF':''});}
+  });
+  return steps;
 }
 
 // === DATA ===
 function getDefaultData(){
   return {
     program:{baseWeight:30,currentWeek:1,startDate:'2026-03-30',goal:60,currentMax:42,
-             consecutiveFails:0,bonusWeight:0},
+             cycleStartMax:42,strict:false,consecutiveFails:0,bonusWeight:0},
     weekPlan:{},
     sessions:[]
   };
 }
-function load(){try{return JSON.parse(localStorage.getItem('sport-tracker2'))||getDefaultData()}catch(e){return getDefaultData()}}
+function load(){
+  let d;
+  try{d=JSON.parse(localStorage.getItem('sport-tracker2'))||getDefaultData()}catch(e){d=getDefaultData()}
+  // Migration donnees existantes
+  if(d.program.cycleStartMax===undefined)d.program.cycleStartMax=d.program.currentMax;
+  if(d.program.strict===undefined)d.program.strict=false;
+  return d;
+}
 function save(d){localStorage.setItem('sport-tracker2',JSON.stringify(d))}
 let data=load();
 let selectedDate=new Date();
@@ -565,6 +620,7 @@ function renderTractionsSession(spec,isIso){
     const obj=getPhaseObjective(wk);
     banners.innerHTML=`<div class="objective-banner">Semaine ${wk}/12 · ${obj.label}</div>`;
   }
+  if(data.program.strict) banners.innerHTML+='<div class="objective-banner" style="margin-top:8px">💡 Depart bras tendus : engage les epaules (scapulas) avant de tirer, gaine, pas d\'elan.</div>';
   document.getElementById('tractions-program').textContent=`${spec.sets} x ${spec.reps}`;
   document.getElementById('tractions-weight').textContent=`+${spec.weight} kg`;
 
@@ -656,24 +712,37 @@ function renderTestMax(){
   const obj=getPhaseObjective(wk);
   document.getElementById('testmax-objective').innerHTML=`Objectif : <strong>>= +${obj.target} kg</strong>`;
   const protocol=document.getElementById('testmax-protocol');
-  const steps=[
-    {w:'Vide',r:'10 reps',note:'Echauffement'},
-    {w:'+10 kg',r:'5 reps',note:''},
-    {w:'+20 kg',r:'3 reps',note:''},
-    {w:'+30 kg',r:'2 reps',note:'Repos 3-4 min apres'},
-    {w:'+35 kg',r:'1 rep',note:''},
-    {w:'+38 kg',r:'1 rep',note:''},
-    {w:'+40 kg',r:'1 rep',note:''},
-    {w:'+42 kg',r:'1 rep',note:''},
-    {w:'+45 kg',r:'1 rep',note:''},
-    {w:'+48 kg',r:'1 rep',note:''},
-    {w:'+50 kg',r:'1 rep',note:''},
-    {w:'+53 kg',r:'1 rep',note:''},
-    {w:'+55 kg',r:'1 rep',note:''},
-    {w:'+58 kg',r:'1 rep',note:''},
-    {w:'+60 kg',r:'1 rep',note:'OBJECTIF FINAL'}
-  ];
+  const steps=buildTestLadder(data.program.currentMax,obj.target);
   protocol.innerHTML=steps.map(s=>`<div class="max-test-row"><div class="step-weight">${s.w}</div><div class="step-reps">${s.r} ${s.note?'<span style="color:var(--orange);font-size:12px">'+s.note+'</span>':''}</div></div>`).join('');
+}
+
+// === RECALIBRAGE (depart bras tendus) ===
+function openRecalibrate(){
+  const est=Math.round(data.program.currentMax*0.88);
+  document.getElementById('recal-estimate').textContent=`Estimation : ton +${data.program.currentMax} "ancien style" vaut environ +${est} kg en depart bras tendus strict. Fais le re-test pour la valeur exacte, ou entre directement l'estimation.`;
+  const inp=document.getElementById('recal-result');
+  inp.value='';inp.placeholder=est;
+  const steps=buildTestLadder(est,est+4);
+  document.getElementById('recal-protocol').innerHTML=steps.map(s=>`<div class="max-test-row"><div class="step-weight">${s.w}</div><div class="step-reps">${s.r} ${s.note&&s.note!=='OBJECTIF'?'<span style="color:var(--orange);font-size:12px">'+s.note+'</span>':''}</div></div>`).join('');
+  showScreen('recalibrate');
+}
+function saveRecalibration(){
+  const v=+document.getElementById('recal-result').value;
+  if(!v){alert('Renseigne ton nouveau max (re-teste, ou entre l\'estimation proposee)');return;}
+  data.program.currentMax=v;
+  data.program.cycleStartMax=v;
+  data.program.baseWeight=Math.max(20,v-12);
+  data.program.bonusWeight=0;
+  data.program.consecutiveFails=0;
+  data.program.currentWeek=1;
+  data.program.strict=true;
+  data.program.startDate=dateKey(new Date());
+  data.sessions.push({type:'tractions',date:dateKey(new Date()),index:-1,subtype:'test-max',weekNum:0,
+    maxResult:v,label:'Recalibrage bras tendus : +'+v+'kg',success:true,timestamp:Date.now()});
+  save(data);
+  const s1=getSessionSpec(1,data.program.baseWeight);
+  alert('Cycle recalcule ! Semaine 1 : '+s1.sets+'x'+s1.reps+' a +'+s1.weight+'kg');
+  showScreen('pullups');
 }
 
 function saveTestMax(){
@@ -702,6 +771,9 @@ function saveTestMax(){
 // === PULLUPS OVERVIEW ===
 function renderPullups(){
   const p=data.program;
+  document.getElementById('pu-strict').innerHTML=p.strict
+    ?'<div class="objective-banner" style="margin-bottom:12px">✅ Mode strict : depart bras tendus, pieds dans le vide</div>'
+    :'<div class="pain-banner" style="font-size:13px;margin-bottom:12px">⚠️ Nouveau setup bras tendus ? Lance un recalibrage pour recalculer tes charges.</div>';
   const baseW=p.baseWeight+p.bonusWeight;
   const spec=getSessionSpec(p.currentWeek,baseW);
   document.getElementById('pu-weight').textContent='+'+spec.weight;
@@ -730,9 +802,14 @@ function renderPullups(){
     nextInfo.textContent='Programme termine !';
   }
 
-  // Goal progress
+  // Goal progress (bornes dynamiques : du max de depart du cycle a l'objectif)
   const maxW=p.currentMax;
-  const goalPct=Math.min(100,Math.round(((maxW-30)/(p.goal-30))*100));
+  const startRef=Math.min(p.cycleStartMax||30,maxW);
+  const span=Math.max(1,p.goal-startRef);
+  const goalPct=Math.max(0,Math.min(100,Math.round(((maxW-startRef)/span)*100)));
+  document.getElementById('pu-goal-title').textContent='Objectif final : +'+p.goal+' kg';
+  document.getElementById('pu-goal-min').textContent='+'+startRef+' kg';
+  document.getElementById('pu-goal-max').textContent='+'+p.goal+' kg';
   document.getElementById('pu-goal-fill').style.width=goalPct+'%';
   document.getElementById('pu-goal-text').textContent=`+${maxW} kg (${goalPct}%)`;
 
