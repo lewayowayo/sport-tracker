@@ -150,6 +150,8 @@ textarea{min-height:80px;resize:vertical}
 .ladder .w{font-family:var(--display);font-size:18px;font-weight:700}
 .ladder .goal{color:var(--accent);font-family:var(--display);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+#history-stats{grid-template-columns:repeat(4,1fr)}
+#history-stats .stat .v{font-size:26px}
 .stat{background:var(--surf);border-radius:var(--r-s);padding:12px 8px;text-align:center}
 .stat .v{font-family:var(--display);font-size:30px;font-weight:800;line-height:1}
 .stat .l{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;font-family:var(--display);font-weight:600}
@@ -449,7 +451,7 @@ function buildTestLadder(ref,target){
 
 // ================= DATA =================
 function getDefaultData(){
-  return {program:{baseWeight:30,currentWeek:1,startDate:'2026-03-30',goal:60,currentMax:42,cycleStartMax:42,strict:false,consecutiveFails:0,bonusWeight:0},weekPlan:{},sessions:[],fingers:{}};
+  return {program:{baseWeight:30,currentWeek:1,startDate:'2026-03-30',goal:60,currentMax:42,cycleStartMax:42,strict:false,consecutiveFails:0,bonusWeight:0},weekPlan:{},sessions:[],fingers:{},abs:{}};
 }
 function load(){
   let d;
@@ -462,6 +464,7 @@ function load(){
   if(!d.weekPlan)d.weekPlan={};
   if(!d.sessions)d.sessions=[];
   if(!d.fingers)d.fingers={};
+  if(!d.abs)d.abs={};
   // Ancien planning : 'repos' n'est plus une séance, un jour vide = repos
   Object.keys(d.weekPlan).forEach(k=>{d.weekPlan[k]=(d.weekPlan[k]||[]).filter(t=>TYPES[t]);});
   return d;
@@ -559,6 +562,11 @@ function renderWeek(){
   f.innerHTML=`<div class="ft"><b>Doigts · Abrahamson</b><small>8 min, suspensions pieds au sol, tous les jours</small></div><div class="sw"></div>`;
   f.onclick=()=>{if(data.fingers[dk])delete data.fingers[dk];else data.fingers[dk]=true;save(data);renderWeek();};
   c.appendChild(f);
+  const a=document.createElement('div');
+  a.className='fingers'+(data.abs[dk]?' on':'');
+  a.innerHTML=`<div class="ft"><b>Abdos · 8 minutes</b><small>Optionnel, les jours de repos de préférence</small></div><div class="sw"></div>`;
+  a.onclick=()=>{if(data.abs[dk])delete data.abs[dk];else data.abs[dk]=true;save(data);renderWeek();};
+  c.appendChild(a);
   const planned=data.weekPlan[dk]||[];
   if(!planned.length){
     c.insertAdjacentHTML('beforeend',`<div class="empty"><b>Jour de repos</b>C'est là que ça pousse. Rien à ajouter.</div>`);
@@ -781,7 +789,7 @@ function renderHistory(){
   const sessions=[...data.sessions].sort((a,b)=>b.timestamp-a.timestamp);
   const month=dateKey(new Date()).slice(0,7);
   const fingersMonth=Object.keys(data.fingers).filter(k=>k.startsWith(month)).length;
-  document.getElementById('history-stats').innerHTML=`<div class="stat"><div class="v num">${sessions.filter(s=>s.date.startsWith(month)).length}</div><div class="l">ce mois</div></div><div class="stat"><div class="v num">${sessions.filter(s=>s.type==='escalade').length}</div><div class="l">grimpes</div></div><div class="stat"><div class="v num">${fingersMonth}</div><div class="l">doigts / mois</div></div>`;
+  document.getElementById('history-stats').innerHTML=`<div class="stat"><div class="v num">${sessions.filter(s=>s.date.startsWith(month)).length}</div><div class="l">ce mois</div></div><div class="stat"><div class="v num">${sessions.filter(s=>s.type==='escalade').length}</div><div class="l">grimpes</div></div><div class="stat"><div class="v num">${fingersMonth}</div><div class="l">doigts / mois</div></div><div class="stat"><div class="v num">${Object.keys(data.abs).filter(k=>k.startsWith(month)).length}</div><div class="l">abdos / mois</div></div>`;
   const list=document.getElementById('history-list');
   if(!sessions.length){list.innerHTML='<div class="empty">Pas encore de séance</div>';return;}
   list.innerHTML=sessions.slice(0,60).map(s=>{
