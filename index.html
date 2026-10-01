@@ -169,6 +169,13 @@ textarea{min-height:80px;resize:vertical}
 .hist .k{font-family:var(--display);font-weight:700;font-size:15px}
 .hist .k i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:1px}
 .hist .i{color:var(--text2);font-size:13px;line-height:1.4;word-wrap:break-word}
+.plan{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.plan:last-child{border-bottom:none}
+.plan .w{flex:0 0 34px;font-family:var(--display);font-weight:700;font-size:16px;color:var(--text2)}
+.plan .t{flex:1}
+.plan .c{font-family:var(--display);font-weight:700;font-size:18px;font-variant-numeric:tabular-nums}
+.plan.cur{color:var(--accent)}.plan.cur .w{color:var(--accent)}
+.plan.done{opacity:.5}
 
 /* MODAL */
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;align-items:flex-end}
@@ -294,6 +301,7 @@ textarea{min-height:80px;resize:vertical}
     <div class="timeline" id="pu-timeline"></div>
     <div class="note" style="text-align:center;margin-top:8px" id="pu-next-info"></div>
   </div>
+  <div class="card"><div class="ct">Plan des 12 semaines</div><div id="pu-plan"></div></div>
   <div class="card">
     <div class="ct" id="pu-goal-title">Objectif +60 kg</div>
     <div class="prog" style="margin:0"><i id="pu-goal-fill" style="width:0"></i></div>
@@ -301,7 +309,7 @@ textarea{min-height:80px;resize:vertical}
   </div>
   <div class="card">
     <div class="ct">Comment ça marche</div>
-    <p class="note">Une séance tirage par semaine. Force (5×3) les semaines impaires, volume (4×5, charge −8) les semaines paires, +2 kg par semaine. Toutes les 4 semaines : séance légère en début de semaine puis test max en fin de semaine. Tempo 2 s montée, 1 s pause, 2 s descente.</p>
+    <p class="note">Une séance tirage par semaine. Force (5×3) les semaines impaires, volume (4×5, charge −8) les semaines paires, +2 kg à chaque séance force. Toutes les 4 semaines : séance légère en début de semaine puis test max en fin de semaine. Tempo 2 s montée, 1 s pause, 2 s descente.</p>
     <button class="btn btn-s mt" onclick="openRecalibrate()">Recalibrer le cycle</button>
   </div>
   <div class="card"><div class="ct">Historique tirage</div><div id="pu-history"></div></div>
@@ -413,7 +421,8 @@ const RENFO = {
 
 // ================= PROGRAMME TRACTIONS =================
 function getWeekType(w){ if(w%4===0)return 'D'; if(w%2===1)return 'A'; return 'B'; }
-function getWeekCharge(w,base){ const phase=Math.floor((w-1)/4), wip=(w-1)%4; return base+phase*8+wip*2; }
+// Charge lourde : +2 kg a chaque semaine de force (S1, S3, S5...), la semaine volume reprend la lourde de la force precedente
+function getWeekCharge(w,base){ return base+2*Math.floor((w-1)/2); }
 function getSessionSpec(w,base){
   const type=getWeekType(w), heavy=getWeekCharge(w,base);
   if(type==='A') return {type:'A',label:'Séance A · Force',sets:5,reps:3,weight:heavy,rest:'Repos 3 à 4 min entre les séries'};
@@ -745,6 +754,13 @@ function renderPullups(){
   document.getElementById('pu-max').textContent='+'+p.currentMax;
   const tl=document.getElementById('pu-timeline'); tl.innerHTML='';
   for(let w=1;w<=12;w++){const t=getWeekType(w);const d=document.createElement('div');d.className=(w<p.currentWeek?'done ':'')+(w===p.currentWeek?'cur ':'')+(t==='D'?'deload':'');d.innerHTML=`S${w}<small>${t==='A'?'FOR':t==='B'?'VOL':'TEST'}</small>`;tl.appendChild(d);}
+  document.getElementById('pu-plan').innerHTML=Array.from({length:12},(_,i)=>i+1).map(w=>{
+    const sp=getSessionSpec(w,baseW()), t=getWeekType(w);
+    const done=data.sessions.filter(s=>s.type==='tractions'&&s.weekNum===w&&(s.subtype==='a'||s.subtype==='b'||s.subtype==='test-max'));
+    const lab=t==='A'?`Force · 5×3 à +${sp.weight} kg`:t==='B'?`Volume · 4×5 à +${sp.weight} kg`:`Décharge 3×5 à +${sp.weight} kg, puis test max`;
+    const res=done.length?(done[0].maxResult?`max +${done[0].maxResult}`:done[0].success?'fait':'raté'):'';
+    return `<div class="plan${w===p.currentWeek?' cur':w<p.currentWeek?' done':''}"><span class="w">S${w}</span><span class="t">${lab}</span><span class="c">${res}</span></div>`;
+  }).join('');
   document.getElementById('pu-next-info').textContent=p.currentWeek<=12?`Prochaine : S${p.currentWeek} · ${spec.label} · ${spec.sets}×${spec.reps} à +${spec.weight} kg`:'Programme terminé. Recalibre pour relancer un cycle.';
   const startRef=Math.min(p.cycleStartMax||30,p.currentMax), span=Math.max(1,p.goal-startRef), pct=Math.max(0,Math.min(100,Math.round((p.currentMax-startRef)/span*100)));
   document.getElementById('pu-goal-title').textContent='Objectif +'+p.goal+' kg';
