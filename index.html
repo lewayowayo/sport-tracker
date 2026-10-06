@@ -89,6 +89,10 @@ input,textarea,select{font-family:inherit;font-size:16px}
 .fingers.on .sw{background:var(--ok)}.fingers.on .sw::after{left:21px;background:#0d1a13}
 .fingers .ft{flex:1}.fingers .ft b{font-family:var(--display);font-size:17px;font-weight:600}
 .fingers .ft small{display:block;font-size:12px;color:var(--text2)}
+.fingers .lnk{color:var(--accent);text-decoration:underline;cursor:pointer}
+.mob{padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;line-height:1.45;color:var(--text2)}
+.mob b{color:var(--text);font-family:var(--display);font-size:16px;font-weight:700;margin-right:6px}
+.mob:last-of-type{border-bottom:none}
 .empty{text-align:center;padding:26px 12px;color:var(--text2);font-size:14px}
 .empty b{display:block;font-family:var(--display);font-size:22px;color:var(--text);margin-bottom:4px}
 
@@ -171,6 +175,8 @@ textarea{min-height:80px;resize:vertical}
 .hist .k{font-family:var(--display);font-weight:700;font-size:15px}
 .hist .k i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:1px}
 .hist .i{color:var(--text2);font-size:13px;line-height:1.4;word-wrap:break-word}
+.hist .del{flex:none;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--text3);font-size:18px;line-height:1;cursor:pointer;align-self:center}
+.hist .del:active{color:var(--bad);border-color:var(--bad)}
 .plan{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 .plan:last-child{border-bottom:none}
 .plan .w{flex:0 0 34px;font-family:var(--display);font-weight:700;font-size:16px;color:var(--text2)}
@@ -361,6 +367,27 @@ textarea{min-height:80px;resize:vertical}
   <button onclick="showScreen('settings')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Réglages</button>
 </div>
 
+<!-- ============ MOBILITÉ ============ -->
+<div class="ov" id="mob-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="sheet">
+    <h2>Mobilité · 10 min</h2>
+    <p class="note mb">Lent, sans forcer. Rien ne doit lancer. À faire mardi, jeudi, dimanche, et avant une grimpe avec des blocs en compression.</p>
+    <div class="ct">Bas du dos</div>
+    <div class="mob"><b>Chat-vache</b> 10 allers-retours, dos rond puis dos creux, à quatre pattes</div>
+    <div class="mob"><b>Bascules de bassin</b> 10, debout, mains sur les hanches, avant-arrière</div>
+    <div class="mob"><b>Pont fessier</b> 10, au sol, serrer les fesses en haut 1 s</div>
+    <div class="mob"><b>Jefferson curl</b> 5, à vide, s'enrouler vertèbre par vertèbre vers le sol et remonter pareil</div>
+    <div class="ct" style="margin-top:14px">Hanches</div>
+    <div class="mob"><b>90/90</b> 1 min par côté, assis, une jambe devant pliée à 90°, l'autre sur le côté à 90°, buste vers le genou avant</div>
+    <div class="mob"><b>Pigeon</b> 1 min par côté, jambe avant pliée devant soi, jambe arrière tendue, buste vers l'avant</div>
+    <div class="mob"><b>Squat profond tenu</b> 1 min, talons au sol, coudes qui poussent les genoux vers l'extérieur</div>
+    <div class="mob"><b>Grenouille</b> 1 min, à genoux, genoux très écartés, bassin qui recule vers les talons</div>
+    <div class="mob"><b>Ischios</b> 45 s par côté, talon sur une chaise, jambe tendue, dos plat, buste vers l'avant</div>
+    <p class="note" style="margin-top:12px">Le 90/90, le pigeon et la grenouille, c'est le pied qui vient sur la prise de la main. Les ischios, c'est le pike jambes tendues.</p>
+    <button class="btn btn-s mt" onclick="document.getElementById('mob-modal').classList.remove('open')">Fermer</button>
+  </div>
+</div>
+
 <!-- ============ PLANIFIER ============ -->
 <div class="ov" id="planning-modal" onclick="if(event.target===this)closePlanning()">
   <div class="sheet">
@@ -451,7 +478,7 @@ function buildTestLadder(ref,target){
 
 // ================= DATA =================
 function getDefaultData(){
-  return {program:{baseWeight:30,currentWeek:1,startDate:'2026-03-30',goal:60,currentMax:42,cycleStartMax:42,strict:false,consecutiveFails:0,bonusWeight:0},weekPlan:{},sessions:[],fingers:{},abs:{}};
+  return {program:{baseWeight:30,currentWeek:1,startDate:'2026-03-30',goal:60,currentMax:42,cycleStartMax:42,strict:false,consecutiveFails:0,bonusWeight:0},weekPlan:{},sessions:[],fingers:{},abs:{},mob:{}};
 }
 function load(){
   let d;
@@ -465,6 +492,7 @@ function load(){
   if(!d.sessions)d.sessions=[];
   if(!d.fingers)d.fingers={};
   if(!d.abs)d.abs={};
+  if(!d.mob)d.mob={};
   // Ancien planning : 'repos' n'est plus une séance, un jour vide = repos
   Object.keys(d.weekPlan).forEach(k=>{d.weekPlan[k]=(d.weekPlan[k]||[]).filter(t=>TYPES[t]);});
   return d;
@@ -567,6 +595,11 @@ function renderWeek(){
   a.innerHTML=`<div class="ft"><b>Abdos · 8 minutes</b><small>Optionnel, les jours de repos de préférence</small></div><div class="sw"></div>`;
   a.onclick=()=>{if(data.abs[dk])delete data.abs[dk];else data.abs[dk]=true;save(data);renderWeek();};
   c.appendChild(a);
+  const m=document.createElement('div');
+  m.className='fingers'+(data.mob[dk]?' on':'');
+  m.innerHTML=`<div class="ft"><b>Mobilité · 10 min</b><small>Lombaires et hanches, les jours de repos. <span class="lnk" data-act="mob">voir la routine</span></small></div><div class="sw"></div>`;
+  m.onclick=(e)=>{if(e.target.dataset.act==='mob'){e.stopPropagation();document.getElementById('mob-modal').classList.add('open');return;}if(data.mob[dk])delete data.mob[dk];else data.mob[dk]=true;save(data);renderWeek();};
+  c.appendChild(m);
   const planned=data.weekPlan[dk]||[];
   if(!planned.length){
     c.insertAdjacentHTML('beforeend',`<div class="empty"><b>Jour de repos</b>C'est là que ça pousse. Rien à ajouter.</div>`);
@@ -789,7 +822,7 @@ function renderHistory(){
   const sessions=[...data.sessions].sort((a,b)=>b.timestamp-a.timestamp);
   const month=dateKey(new Date()).slice(0,7);
   const fingersMonth=Object.keys(data.fingers).filter(k=>k.startsWith(month)).length;
-  document.getElementById('history-stats').innerHTML=`<div class="stat"><div class="v num">${sessions.filter(s=>s.date.startsWith(month)).length}</div><div class="l">ce mois</div></div><div class="stat"><div class="v num">${sessions.filter(s=>s.type==='escalade').length}</div><div class="l">grimpes</div></div><div class="stat"><div class="v num">${fingersMonth}</div><div class="l">doigts / mois</div></div><div class="stat"><div class="v num">${Object.keys(data.abs).filter(k=>k.startsWith(month)).length}</div><div class="l">abdos / mois</div></div>`;
+  document.getElementById('history-stats').innerHTML=`<div class="stat"><div class="v num">${sessions.filter(s=>s.date.startsWith(month)).length}</div><div class="l">ce mois</div></div><div class="stat"><div class="v num">${sessions.filter(s=>s.type==='escalade').length}</div><div class="l">grimpes</div></div><div class="stat"><div class="v num">${fingersMonth}</div><div class="l">doigts / mois</div></div><div class="stat"><div class="v num">${Object.keys(data.mob).filter(k=>k.startsWith(month)).length}</div><div class="l">mobilité / mois</div></div>`;
   const list=document.getElementById('history-list');
   if(!sessions.length){list.innerHTML='<div class="empty">Pas encore de séance</div>';return;}
   list.innerHTML=sessions.slice(0,60).map(s=>{
@@ -798,8 +831,14 @@ function renderHistory(){
     if(s.type==='escalade')d=(s.duration||0)+' h'+(s.notes?' · '+s.notes.slice(0,60):'');
     else if(s.type==='tractions')d=(s.label||'')+(s.reps?' · '+s.reps.join('/'):'');
     else d=(s.exercises||[]).filter(e=>e.sets||e.weight).map(e=>`${e.name} ${fmtLast(e)}`).join(' · ');
-    return `<div class="hist"><div class="dt">${shortDate(s.date)}</div><div class="body"><div class="k"><i style="background:${t.color}"></i>${t.name}</div><div class="i">${esc(d)}</div></div></div>`;
+    const del=s.type!=='tractions'?`<button class="del" onclick="deleteSession(${s.timestamp})" aria-label="Supprimer">×</button>`:'';
+    return `<div class="hist"><div class="dt">${shortDate(s.date)}</div><div class="body"><div class="k"><i style="background:${t.color}"></i>${t.name}</div><div class="i">${esc(d)}</div></div>${del}</div>`;
   }).join('');
+}
+function deleteSession(ts){
+  const s=data.sessions.find(x=>x.timestamp===ts); if(!s)return;
+  if(!confirm(`Supprimer la séance ${TYPES[s.type]?TYPES[s.type].name:s.type} du ${shortDate(s.date)} ? Tu pourras la ressaisir depuis la semaine.`))return;
+  data.sessions=data.sessions.filter(x=>x.timestamp!==ts); save(data); renderHistory();
 }
 
 // ================= RÉGLAGES =================
