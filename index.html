@@ -153,6 +153,8 @@ textarea{min-height:80px;resize:vertical}
 .ladder div{display:flex;justify-content:space-between;padding:8px 12px;background:var(--bg2);border-radius:8px;font-size:14px}
 .ladder .w{font-family:var(--display);font-size:18px;font-weight:700}
 .ladder .goal{color:var(--accent);font-family:var(--display);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.ladder .rst{color:var(--text2);font-size:12px}
+.ladder div span:last-child{text-align:right;max-width:60%}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
 #history-stats{grid-template-columns:repeat(4,1fr)}
 #history-stats .stat .v{font-size:26px}
@@ -459,20 +461,26 @@ function getSessionSpec(w,base){
   return {type:'D',label:'Décharge · séance légère',sets:3,reps:5,weight:heavy-15,isDeload:true,rest:'Léger. Test max en fin de semaine'};
 }
 function getPhaseObjective(w){
-  const start=data.program.cycleStartMax||data.program.currentMax||40, goal=data.program.goal||60;
-  const t4=Math.min(goal,start+3),t8=Math.min(goal,start+10),t12=Math.min(goal,start+18);
-  if(w<=4) return {week:4,target:t4,label:'Test S4 : objectif ≥ +'+t4+' kg'};
-  if(w<=8) return {week:8,target:t8,label:'Test S8 : objectif ≥ +'+t8+' kg'};
-  return {week:12,target:t12,label:'Test S12 : objectif ≥ +'+t12+' kg'};
+  const cur=data.program.currentMax||40, goal=data.program.goal||60;
+  const t=Math.min(goal,cur+3);
+  if(w<=4) return {week:4,target:t,label:'Test S4 : objectif ≥ +'+t+' kg'};
+  if(w<=8) return {week:8,target:t,label:'Test S8 : objectif ≥ +'+t+' kg'};
+  return {week:12,target:t,label:'Test S12 : objectif ≥ +'+t+' kg'};
 }
 function buildTestLadder(ref,target){
   const r5=v=>Math.max(5,Math.round(v/5)*5);
-  const w25=r5(ref*.25),w50=r5(ref*.5),w70=r5(ref*.7);
-  const steps=[{w:'À vide',r:'10 reps'},{w:'+'+w25+' kg',r:'5 reps'},{w:'+'+w50+' kg',r:'3 reps'},{w:'+'+w70+' kg',r:'2 reps',note:'Repos 3-4 min après'}];
-  const top=Math.max(target,ref+2); const singles=[ref-6,ref-3,ref-1]; let w=ref+1;
-  while(w<top){singles.push(w);w+=2;} singles.push(top);
-  const seen=new Set();
-  singles.forEach(x=>{ if(x>w70&&!seen.has(x)){seen.add(x);steps.push({w:'+'+x+' kg',r:'1 rep',note:x>=target?'OBJECTIF':''});} });
+  const w25=r5(ref*.25),w50=r5(ref*.5),w70=r5(ref*.7),w85=ref-8;
+  const steps=[
+    {w:'À vide',r:'5 reps',note:'Repos 1 min 30'},
+    {w:'À vide',r:'3 reps',note:'Repos 1 min 30'},
+    {w:'+'+w25+' kg',r:'2 reps',note:'Repos 2 min'},
+    {w:'+'+w50+' kg',r:'1 rep',note:'Repos 2 min'},
+    {w:'+'+w70+' kg',r:'1 rep',note:'Repos 3 min'}
+  ];
+  if(w85>w70) steps.push({w:'+'+w85+' kg',r:'1 rep',note:'Repos 3 min'});
+  const singles=[[ref-4,'Repos 4 min'],[ref,'Repos 4-5 min'],[ref+2,'Repos 5 min'],[ref+4,'Seulement si le palier précédent est passé vite']];
+  const seen=new Set([w25,w50,w70,w85]);
+  singles.forEach(([x,n])=>{ if(x>w70&&!seen.has(x)){seen.add(x);steps.push({w:'+'+x+' kg',r:'1 rep',note:x>=target?'OBJECTIF · '+n:n});} });
   return steps;
 }
 
@@ -751,7 +759,7 @@ function saveTractions(){
 }
 
 // ================= TEST MAX =================
-function ladderHTML(steps){return steps.map(s=>`<div><span class="w">${s.w}</span><span>${s.r}${s.note?` <span class="goal">${s.note}</span>`:''}</span></div>`).join('')}
+function ladderHTML(steps){return steps.map(s=>{const g=s.note&&s.note.startsWith('OBJECTIF');const n=s.note?(g?`<span class="goal">OBJECTIF</span> <span class="rst">${s.note.replace('OBJECTIF · ','')}</span>`:`<span class="rst">${s.note}</span>`):'';return `<div><span class="w">${s.w}</span><span>${s.r}${n?'<br>'+n:''}</span></div>`}).join('')}
 function renderTestMax(){
   const wk=data.program.currentWeek, obj=getPhaseObjective(wk);
   document.getElementById('tm-objective').innerHTML=`Objectif : <b>≥ +${obj.target} kg</b>. Ton max servira à caler le bloc suivant.`;
@@ -774,7 +782,7 @@ function openRecalibrate(){
   const est=Math.round(data.program.currentMax*.88);
   document.getElementById('recal-estimate').textContent=`Ton +${data.program.currentMax} vaut environ +${est} kg en départ bras tendus strict. Refais le test pour la valeur exacte, ou entre l'estimation.`;
   const inp=document.getElementById('recal-result'); inp.value=''; inp.placeholder=est;
-  document.getElementById('recal-protocol').innerHTML=ladderHTML(buildTestLadder(est,est+4).map(s=>({...s,note:s.note==='OBJECTIF'?'':s.note})));
+  document.getElementById('recal-protocol').innerHTML=ladderHTML(buildTestLadder(est,est+4).map(s=>({...s,note:(s.note||'').replace('OBJECTIF · ','')})));
   showScreen('recalibrate');
 }
 function saveRecalibration(){
