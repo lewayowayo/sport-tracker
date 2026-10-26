@@ -635,6 +635,15 @@ function lastLine(exs){
   return exs.filter(e=>e.weight||e.setReps?.length||e.reps).slice(0,2).map(e=>e.name.split(' ')[0]+' '+fmtLast(e)).join(' · ');
 }
 
+// ================= BROUILLON AUTO =================
+const DRAFT_KEY='sport-tracker2-draft';
+function draftId(){return currentKey?currentKey.type+'-'+currentKey.date+'-'+currentKey.index:'none';}
+function saveDraft(d){try{const all=JSON.parse(localStorage.getItem(DRAFT_KEY)||'{}');all[draftId()]=d;localStorage.setItem(DRAFT_KEY,JSON.stringify(all));}catch(e){}}
+function loadDraft(){try{const all=JSON.parse(localStorage.getItem(DRAFT_KEY)||'{}');return all[draftId()]||null;}catch(e){return null;}}
+function clearDraft(){try{const all=JSON.parse(localStorage.getItem(DRAFT_KEY)||'{}');delete all[draftId()];localStorage.setItem(DRAFT_KEY,JSON.stringify(all));}catch(e){}}
+function collectInputs(ct){const d={};ct.querySelectorAll('.w-in').forEach(w=>{d[w.dataset.ex]={...(d[w.dataset.ex]||{}),w:w.value};});ct.querySelectorAll('.set-in').forEach(s=>{const k=s.dataset.ex;if(!d[k])d[k]={};if(!d[k].s)d[k].s=[];d[k].s[+s.dataset.i]=s.value;});return d;}
+function restoreInputs(ct,draft){if(!draft)return;Object.keys(draft).forEach(k=>{const d=draft[k];if(d.w){const w=ct.querySelector('.w-in[data-ex="'+k+'"]');if(w)w.value=d.w;}if(d.s)d.s.forEach((v,i)=>{if(v){const s=ct.querySelector('.set-in[data-ex="'+k+'"][data-i="'+i+'"]');if(s)s.value=v;}});});}
+
 // ================= OUVRIR =================
 function openSession(typeId,date,index){
   currentKey={type:typeId,date,index};
@@ -644,14 +653,21 @@ function openSession(typeId,date,index){
     const dow=new Date(date).getDay();
     document.getElementById('esc-hint').textContent=dow===1?'Lundi : la séance dure de la semaine. Bloc limite, projet, tu es frais.':dow===3?'Mercredi : technique et volume, un cran sous ton max. Le tirage vient après.':'Vendredi : séance libre. Deux jours de repos derrière.';
     showScreen('session-escalade');
+    const eD=loadDraft();if(eD){document.getElementById('escalade-duration').value=eD.dur||'';document.getElementById('escalade-notes').value=eD.notes||'';}
+    const savEsc=()=>saveDraft({dur:document.getElementById('escalade-duration').value,notes:document.getElementById('escalade-notes').value});
+    document.getElementById('escalade-duration').oninput=savEsc;document.getElementById('escalade-notes').oninput=savEsc;
   } else if(typeId==='poussee'||typeId==='jambes'){
     renderRenfo(typeId,date); showScreen('session-renfo');
+    const rD=loadDraft();if(rD)restoreInputs(document.getElementById('renfo-exercises'),rD);
+    document.getElementById('renfo-exercises').oninput=()=>saveDraft(collectInputs(document.getElementById('renfo-exercises')));
   } else if(typeId==='tractions'){
     const wk=data.program.currentWeek;
     if(wk>12){alert('Programme terminé. Relance un cycle depuis l\'onglet Tractions.');return;}
     const spec=getSessionSpec(wk,baseW());
     if(spec.type==='D'&&lightDoneThisWeek(new Date(date))){
       document.getElementById('tm-date').textContent=fmtLong(new Date(date)); renderTestMax(); showScreen('session-testmax');
+      const tmD=loadDraft();if(tmD&&tmD.max)document.getElementById('testmax-result').value=tmD.max;
+      document.getElementById('testmax-result').oninput=()=>saveDraft({max:document.getElementById('testmax-result').value});
     } else {
       document.getElementById('tr-date').textContent=fmtLong(new Date(date)); renderTractions(spec); showScreen('session-tractions');
     }
@@ -661,7 +677,7 @@ function openSession(typeId,date,index){
 // ================= ESCALADE =================
 function saveEscalade(){
   data.sessions.push({...currentKey,duration:parseFloat(document.getElementById('escalade-duration').value)||0,notes:document.getElementById('escalade-notes').value,timestamp:Date.now()});
-  save(data);showScreen('week');
+  clearDraft();save(data);showScreen('week');
 }
 
 // ================= RENFO =================
@@ -698,7 +714,7 @@ function saveRenfo(){
   const exercises=cfg.ex.map(e=>readEx(e,''));
   if(!exercises.some(e=>e.sets>0)){if(!confirm('Aucune série saisie. Valider quand même ?'))return;}
   data.sessions.push({...currentKey,exercises,timestamp:Date.now()});
-  save(data);showScreen('week');
+  clearDraft();save(data);showScreen('week');
 }
 
 // ================= TIRAGE =================
@@ -715,17 +731,25 @@ function renderTractions(spec){
   const slider=document.getElementById('pain-slider'); slider.value=0; document.getElementById('pain-display').textContent='0/10';
   const normal=document.getElementById('tr-normal'), iso=document.getElementById('tr-iso');
   normal.classList.remove('hidden'); iso.classList.add('hidden');
+  const saveTrDraft=()=>saveDraft({reps:[...document.querySelectorAll('#tr-inputs input')].map(x=>x.value),pain:slider.value,acc:collectInputs(document.getElementById('tr-accessories'))});
   slider.oninput=()=>{const v=+slider.value;document.getElementById('pain-display').textContent=v+'/10';
     if(v>4){normal.classList.add('hidden');iso.classList.remove('hidden');document.getElementById('iso-program').textContent=`4 × 20 s isométrique à +${Math.round(spec.weight*.5)} kg`;}
-    else{normal.classList.remove('hidden');iso.classList.add('hidden');}};
+    else{normal.classList.remove('hidden');iso.classList.add('hidden');}saveTrDraft();};
   const c=document.getElementById('tr-inputs'); c.innerHTML='';
   for(let i=0;i<spec.sets;i++){
     const inp=document.createElement('input'); inp.type='number'; inp.inputMode='numeric'; inp.min='0'; inp.max='20'; inp.placeholder=spec.reps;
-    inp.oninput=()=>{inp.classList.toggle('good',+inp.value>=spec.reps);inp.classList.toggle('short',+inp.value>0&&+inp.value<spec.reps);updateResult(spec);};
+    inp.oninput=()=>{inp.classList.toggle('good',+inp.value>=spec.reps);inp.classList.toggle('short',+inp.value>0&&+inp.value<spec.reps);updateResult(spec);saveTrDraft();};
     c.appendChild(inp);
   }
   document.getElementById('tr-result').textContent='';
   document.getElementById('tr-accessories').innerHTML=RENFO.tirageAcc.map(e=>exBlock(e,'')).join('');
+  document.getElementById('tr-accessories').oninput=saveTrDraft;
+  const tD=loadDraft();
+  if(tD){
+    if(tD.reps){const inps=[...document.querySelectorAll('#tr-inputs input')];tD.reps.forEach((v,i)=>{if(inps[i]&&v){inps[i].value=v;inps[i].classList.toggle('good',+v>=spec.reps);inps[i].classList.toggle('short',+v>0&&+v<spec.reps);}});if(tD.reps.some(v=>v!==''))updateResult(spec);}
+    if(tD.pain&&+tD.pain>0){slider.value=tD.pain;slider.oninput();}
+    if(tD.acc)restoreInputs(document.getElementById('tr-accessories'),tD.acc);
+  }
 }
 function updateResult(spec){
   const inputs=[...document.querySelectorAll('#tr-inputs input')], el=document.getElementById('tr-result');
@@ -744,7 +768,7 @@ function saveTractions(){
   const accessories=RENFO.tirageAcc.map(e=>readEx(e,''));
   if(pain>4){
     data.sessions.push({...currentKey,subtype:'isometric',weekNum:wk,label:`S${wk} isométrique +${Math.round(spec.weight*.5)} kg`,pain,accessories,timestamp:Date.now()});
-    save(data);showScreen('week');return;
+    clearDraft();save(data);showScreen('week');return;
   }
   const inputs=[...document.querySelectorAll('#tr-inputs input')];
   if(inputs.some(i=>i.value==='')){alert('Renseigne les reps de chaque série');return;}
@@ -755,7 +779,7 @@ function saveTractions(){
     if(ok){data.program.consecutiveFails=0;data.program.currentWeek=Math.min(wk+1,13);}
     else{data.program.consecutiveFails++;if(data.program.consecutiveFails>=2){data.program.baseWeight=Math.max(data.program.baseWeight-2,20);data.program.consecutiveFails=0;}}
   }
-  save(data);showScreen('week');
+  clearDraft();save(data);showScreen('week');
 }
 
 // ================= TEST MAX =================
@@ -774,7 +798,7 @@ function saveTestMax(){
   if(wk===4&&v>=obj.target+2)data.program.bonusWeight+=2;
   if(wk===8&&v>=obj.target)data.program.bonusWeight+=2;
   data.program.currentWeek=Math.min(wk+1,13); data.program.consecutiveFails=0;
-  save(data);showScreen('week');
+  clearDraft();save(data);showScreen('week');
 }
 
 // ================= RECALIBRAGE =================
@@ -910,6 +934,17 @@ function applyTemplate(){
 function savePlanning(){save(data);closePlanning();renderWeek();}
 function changeWeek(dir){selectedDate=new Date(selectedDate.getTime()+dir*7*86400000);renderWeek();}
 function goToday(){selectedDate=new Date();renderWeek();}
+
+// ================= VISIBILITY SAVE =================
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden'&&currentKey){
+    const a=document.querySelector('.screen.active');if(!a)return;const id=a.id;
+    if(id==='screen-session-escalade')saveDraft({dur:document.getElementById('escalade-duration').value,notes:document.getElementById('escalade-notes').value});
+    else if(id==='screen-session-renfo')saveDraft(collectInputs(document.getElementById('renfo-exercises')));
+    else if(id==='screen-session-tractions')saveDraft({reps:[...document.querySelectorAll('#tr-inputs input')].map(x=>x.value),pain:document.getElementById('pain-slider').value,acc:collectInputs(document.getElementById('tr-accessories'))});
+    else if(id==='screen-session-testmax')saveDraft({max:document.getElementById('testmax-result').value});
+  }
+});
 
 // ================= INIT =================
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js');
