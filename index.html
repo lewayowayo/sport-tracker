@@ -350,7 +350,7 @@ textarea{min-height:80px;resize:vertical}
   </div>
   <div class="card">
     <div class="ct">Semaine type</div>
-    <p class="note mb">Lundi poussée + grimpe. Mercredi grimpe + tirage. Vendredi bas du corps + grimpe. Mardi, jeudi et week-end : repos. Doigts tous les jours.</p>
+    <p class="note mb">Lundi grimpe projet, frais. Mardi matin poussée. Mercredi grimpe + tirage. Vendredi bas du corps + grimpe. Jeudi et week-end : repos. Doigts tous les jours.</p>
     <p class="note">Le bouton « Semaine type » dans Planifier applique ce schéma à la semaine affichée.</p>
   </div>
   <div class="card">
@@ -373,7 +373,7 @@ textarea{min-height:80px;resize:vertical}
 <div class="ov" id="mob-modal" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="sheet">
     <h2>Mobilité · 10 min</h2>
-    <p class="note mb">Lent, sans forcer. Rien ne doit lancer. À faire mardi, jeudi, dimanche, et avant une grimpe avec des blocs en compression.</p>
+    <p class="note mb">Lent, sans forcer. Rien ne doit lancer. À faire jeudi, samedi, dimanche, et avant une grimpe avec des blocs en compression.</p>
     <div class="ct">Bas du dos</div>
     <div class="mob"><b>Chat-vache</b> 10 allers-retours, dos rond puis dos creux, à quatre pattes</div>
     <div class="mob"><b>Bascules de bassin</b> 10, debout, mains sur les hanches, avant-arrière</div>
@@ -416,13 +416,13 @@ const QUOTAS={escalade:3,poussee:1,tractions:1,jambes:1};
 const DAYS_FR=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
 const DAYS_LONG=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 // Semaine type : jour (1=lundi) -> séances
-const TEMPLATE={1:['poussee','escalade'],3:['escalade','tractions'],5:['jambes','escalade']};
+const TEMPLATE={1:['escalade'],2:['poussee'],3:['escalade','tractions'],5:['jambes','escalade']};
 
 // Exercices. w=true : charge en kg ajoutés. sets/reps : cible.
 const RENFO = {
   poussee:{
     title:'Poussée',
-    hint:'Séance complète du lundi, avant la grimpe du soir. Charges qui montent toutes les 1 à 2 semaines, séries à 1 ou 2 reps de l\'échec.',
+    hint:'Séance complète du mardi matin, lendemain de la grosse grimpe. Charges qui montent toutes les 1 à 2 semaines, séries à 1 ou 2 reps de l\'échec.',
     ex:[
       {id:'dips-lestes',name:'Dips lestés',w:true,sets:4,reps:'6-8',cue:'Descente contrôlée, coudes proches du corps'},
       {id:'pike-pushups',name:'Pike push-ups',w:false,sets:3,reps:'8-10',cue:'Pieds surélevés, tête vers le sol entre les mains'},
@@ -438,7 +438,7 @@ const RENFO = {
     ex:[
       {id:'squat',name:'Squat goblet ou bulgare',w:true,sets:2,reps:'10',cue:'Charge modérée, descente complète'},
       {id:'hip-thrust',name:'Hip thrust ou roumain',w:true,sets:2,reps:'10',cue:'Dos contre un banc, charge sur les hanches. Roumain : jambes quasi tendues, dos plat'},
-      {id:'dips-lestes',name:'Dips lestés',w:true,sets:3,reps:'6-8',cue:'Un peu moins lourd que lundi'},
+      {id:'dips-lestes',name:'Dips lestés',w:true,sets:3,reps:'6-8',cue:'Un peu moins lourd que mardi'},
       {id:'pike-pushups',name:'Pike push-ups',w:false,sets:3,reps:'8-10',cue:''},
       {id:'releves-jambes',name:'Relevés de jambes suspendu',w:false,sets:3,reps:'10-12',cue:'Jambes tendues si possible, descente lente'}
     ]
@@ -635,16 +635,17 @@ function lastLine(exs){
   return exs.filter(e=>e.weight||e.setReps?.length||e.reps).slice(0,2).map(e=>e.name.split(' ')[0]+' '+fmtLast(e)).join(' · ');
 }
 
-// ================= BROUILLON AUTO =================
-const DRAFT_KEY='sport-tracker2-draft';
-function draftId(){return currentKey?currentKey.type+'-'+currentKey.date+'-'+currentKey.index:'none';}
-function saveDraft(d){try{const all=JSON.parse(localStorage.getItem(DRAFT_KEY)||'{}');all[draftId()]=d;localStorage.setItem(DRAFT_KEY,JSON.stringify(all));}catch(e){}}
-function loadDraft(){try{const all=JSON.parse(localStorage.getItem(DRAFT_KEY)||'{}');return all[draftId()]||null;}catch(e){return null;}}
-function clearDraft(){try{const all=JSON.parse(localStorage.getItem(DRAFT_KEY)||'{}');delete all[draftId()];localStorage.setItem(DRAFT_KEY,JSON.stringify(all));}catch(e){}}
-function collectInputs(ct){const d={};ct.querySelectorAll('.w-in').forEach(w=>{d[w.dataset.ex]={...(d[w.dataset.ex]||{}),w:w.value};});ct.querySelectorAll('.set-in').forEach(s=>{const k=s.dataset.ex;if(!d[k])d[k]={};if(!d[k].s)d[k].s=[];d[k].s[+s.dataset.i]=s.value;});return d;}
-function restoreInputs(ct,draft){if(!draft)return;Object.keys(draft).forEach(k=>{const d=draft[k];if(d.w){const w=ct.querySelector('.w-in[data-ex="'+k+'"]');if(w)w.value=d.w;}if(d.s)d.s.forEach((v,i)=>{if(v){const s=ct.querySelector('.set-in[data-ex="'+k+'"][data-i="'+i+'"]');if(s)s.value=v;}});});}
-
 // ================= OUVRIR =================
+
+// ================= BROUILLONS =================
+let currentScreenId=null;
+function draftId(){return currentKey?'sport-draft:'+currentKey.type+':'+currentKey.date+':'+(currentKey.index||0):null;}
+function draftFields(){const sc=currentScreenId&&document.getElementById('screen-'+currentScreenId);return sc?[...sc.querySelectorAll('input:not([disabled]),textarea')]:[];}
+function saveDraft(){const id=draftId();if(!id)return;const vals=draftFields().map(f=>f.value);if(vals.every(v=>v===''||v==='0')){localStorage.removeItem(id);return;}try{localStorage.setItem(id,JSON.stringify(vals));}catch(e){}}
+function restoreDraft(screenId){currentScreenId=screenId;const id=draftId();if(!id)return;let vals=null;try{vals=JSON.parse(localStorage.getItem(id)||'null');}catch(e){}if(!vals)return;const fields=draftFields();let any=false;fields.forEach((f,i)=>{if(vals[i]!==undefined&&vals[i]!==''&&f.value!==vals[i]){f.value=vals[i];any=true;f.dispatchEvent(new Event('input',{bubbles:true}));}});if(any){const sc=document.getElementById('screen-'+screenId);const n=document.createElement('div');n.className='banner info';n.textContent='Saisie précédente restaurée.';n.style.marginTop='8px';const hdr=sc.querySelector('.hdr');if(hdr)hdr.insertAdjacentElement('afterend',n);setTimeout(()=>n.remove(),4000);}}
+function clearDraft(){const id=draftId();if(id)localStorage.removeItem(id);currentScreenId=null;}
+document.addEventListener('input',e=>{if(currentScreenId&&e.target.closest&&e.target.closest('#screen-'+currentScreenId))saveDraft();});
+
 function openSession(typeId,date,index){
   currentKey={type:typeId,date,index};
   if(typeId==='escalade'){
@@ -652,24 +653,17 @@ function openSession(typeId,date,index){
     document.getElementById('escalade-duration').value='';document.getElementById('escalade-notes').value='';
     const dow=new Date(date).getDay();
     document.getElementById('esc-hint').textContent=dow===1?'Lundi : la séance dure de la semaine. Bloc limite, projet, tu es frais.':dow===3?'Mercredi : technique et volume, un cran sous ton max. Le tirage vient après.':'Vendredi : séance libre. Deux jours de repos derrière.';
-    showScreen('session-escalade');
-    const eD=loadDraft();if(eD){document.getElementById('escalade-duration').value=eD.dur||'';document.getElementById('escalade-notes').value=eD.notes||'';}
-    const savEsc=()=>saveDraft({dur:document.getElementById('escalade-duration').value,notes:document.getElementById('escalade-notes').value});
-    document.getElementById('escalade-duration').oninput=savEsc;document.getElementById('escalade-notes').oninput=savEsc;
+    showScreen('session-escalade'); restoreDraft('session-escalade');
   } else if(typeId==='poussee'||typeId==='jambes'){
-    renderRenfo(typeId,date); showScreen('session-renfo');
-    const rD=loadDraft();if(rD)restoreInputs(document.getElementById('renfo-exercises'),rD);
-    document.getElementById('renfo-exercises').oninput=()=>saveDraft(collectInputs(document.getElementById('renfo-exercises')));
+    renderRenfo(typeId,date); showScreen('session-renfo'); restoreDraft('session-renfo');
   } else if(typeId==='tractions'){
     const wk=data.program.currentWeek;
     if(wk>12){alert('Programme terminé. Relance un cycle depuis l\'onglet Tractions.');return;}
     const spec=getSessionSpec(wk,baseW());
     if(spec.type==='D'&&lightDoneThisWeek(new Date(date))){
-      document.getElementById('tm-date').textContent=fmtLong(new Date(date)); renderTestMax(); showScreen('session-testmax');
-      const tmD=loadDraft();if(tmD&&tmD.max)document.getElementById('testmax-result').value=tmD.max;
-      document.getElementById('testmax-result').oninput=()=>saveDraft({max:document.getElementById('testmax-result').value});
+      document.getElementById('tm-date').textContent=fmtLong(new Date(date)); renderTestMax(); showScreen('session-testmax'); restoreDraft('session-testmax');
     } else {
-      document.getElementById('tr-date').textContent=fmtLong(new Date(date)); renderTractions(spec); showScreen('session-tractions');
+      document.getElementById('tr-date').textContent=fmtLong(new Date(date)); renderTractions(spec); showScreen('session-tractions'); restoreDraft('session-tractions');
     }
   }
 }
@@ -731,25 +725,17 @@ function renderTractions(spec){
   const slider=document.getElementById('pain-slider'); slider.value=0; document.getElementById('pain-display').textContent='0/10';
   const normal=document.getElementById('tr-normal'), iso=document.getElementById('tr-iso');
   normal.classList.remove('hidden'); iso.classList.add('hidden');
-  const saveTrDraft=()=>saveDraft({reps:[...document.querySelectorAll('#tr-inputs input')].map(x=>x.value),pain:slider.value,acc:collectInputs(document.getElementById('tr-accessories'))});
   slider.oninput=()=>{const v=+slider.value;document.getElementById('pain-display').textContent=v+'/10';
     if(v>4){normal.classList.add('hidden');iso.classList.remove('hidden');document.getElementById('iso-program').textContent=`4 × 20 s isométrique à +${Math.round(spec.weight*.5)} kg`;}
-    else{normal.classList.remove('hidden');iso.classList.add('hidden');}saveTrDraft();};
+    else{normal.classList.remove('hidden');iso.classList.add('hidden');}};
   const c=document.getElementById('tr-inputs'); c.innerHTML='';
   for(let i=0;i<spec.sets;i++){
     const inp=document.createElement('input'); inp.type='number'; inp.inputMode='numeric'; inp.min='0'; inp.max='20'; inp.placeholder=spec.reps;
-    inp.oninput=()=>{inp.classList.toggle('good',+inp.value>=spec.reps);inp.classList.toggle('short',+inp.value>0&&+inp.value<spec.reps);updateResult(spec);saveTrDraft();};
+    inp.oninput=()=>{inp.classList.toggle('good',+inp.value>=spec.reps);inp.classList.toggle('short',+inp.value>0&&+inp.value<spec.reps);updateResult(spec);};
     c.appendChild(inp);
   }
   document.getElementById('tr-result').textContent='';
   document.getElementById('tr-accessories').innerHTML=RENFO.tirageAcc.map(e=>exBlock(e,'')).join('');
-  document.getElementById('tr-accessories').oninput=saveTrDraft;
-  const tD=loadDraft();
-  if(tD){
-    if(tD.reps){const inps=[...document.querySelectorAll('#tr-inputs input')];tD.reps.forEach((v,i)=>{if(inps[i]&&v){inps[i].value=v;inps[i].classList.toggle('good',+v>=spec.reps);inps[i].classList.toggle('short',+v>0&&+v<spec.reps);}});if(tD.reps.some(v=>v!==''))updateResult(spec);}
-    if(tD.pain&&+tD.pain>0){slider.value=tD.pain;slider.oninput();}
-    if(tD.acc)restoreInputs(document.getElementById('tr-accessories'),tD.acc);
-  }
 }
 function updateResult(spec){
   const inputs=[...document.querySelectorAll('#tr-inputs input')], el=document.getElementById('tr-result');
@@ -934,17 +920,6 @@ function applyTemplate(){
 function savePlanning(){save(data);closePlanning();renderWeek();}
 function changeWeek(dir){selectedDate=new Date(selectedDate.getTime()+dir*7*86400000);renderWeek();}
 function goToday(){selectedDate=new Date();renderWeek();}
-
-// ================= VISIBILITY SAVE =================
-document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='hidden'&&currentKey){
-    const a=document.querySelector('.screen.active');if(!a)return;const id=a.id;
-    if(id==='screen-session-escalade')saveDraft({dur:document.getElementById('escalade-duration').value,notes:document.getElementById('escalade-notes').value});
-    else if(id==='screen-session-renfo')saveDraft(collectInputs(document.getElementById('renfo-exercises')));
-    else if(id==='screen-session-tractions')saveDraft({reps:[...document.querySelectorAll('#tr-inputs input')].map(x=>x.value),pain:document.getElementById('pain-slider').value,acc:collectInputs(document.getElementById('tr-accessories'))});
-    else if(id==='screen-session-testmax')saveDraft({max:document.getElementById('testmax-result').value});
-  }
-});
 
 // ================= INIT =================
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js');
